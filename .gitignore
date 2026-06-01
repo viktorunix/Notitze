@@ -1,0 +1,6 @@
+src/raylib.dll
+src/include/raylib.h
+src/include/raymath.h
+src/include/rlgl.h
+src/lib
+src/notes.exe
