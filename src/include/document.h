@@ -13,10 +13,15 @@ typedef struct {
     float thickness;
 } Stroke;
 
-
 typedef struct {
     Stroke *strokes;
     int strokeCount;
     int capacity;
+} Page;
+typedef struct {
+    Page *pages;
+    int pageCount;
+    int pageCapacity;
+    int activePage;
 } Document;
 #endif
