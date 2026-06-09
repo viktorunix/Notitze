@@ -123,9 +123,9 @@ int main(void){
     const int screenWidth = 1400;
     const int screenHeight = 900;
 
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
-
+    SetWindowMinSize(800, 600);
     Document doc = {0};
     AddPageToDocument(&doc);
 
@@ -135,7 +135,12 @@ int main(void){
     Color currentBrushColor = BLACK;
     float currentBrushThickness = 3.0f;
 
-    Vector2 canvasOffset = { (screenWidth - A4_WIDTH) / 2.0f, 20.0f};
+    //Vector2 canvasOffset = { (screenWidth - A4_WIDTH) / 2.0f, 20.0f};
+    Camera2D camera = {0};
+    camera.target = (Vector2){0.0f, 0.0f};
+    camera.offset = (Vector2){ (GetScreenWidth() - A4_WIDTH) / 2.0f, 50.0f};
+    camera.rotation = 0.0f;
+    camera.zoom = 1.0f;
     SetTargetFPS(120);
 
     while(!WindowShouldClose()){
@@ -160,26 +165,29 @@ int main(void){
         if(IsKeyPressed(KEY_U)){
             UndoLastStrokes(&(doc.pages[doc.activePage]));
         }
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)){
+            Vector2 delta = GetMouseDelta();
+            camera.offset.x +=delta.x;
+            camera.offset.y +=delta.y;
+        }
+        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
-        Vector2 mousePos = GetMousePosition();
-        Vector2 canvasMousePos = { mousePos.x - canvasOffset.x, mousePos.y - canvasOffset.y};
-
-        bool isMouseInsideCanvas = (canvasMousePos.x >=0 && canvasMousePos.x <= A4_WIDTH &&
-                                    canvasMousePos.y >=0 && canvasMousePos.y <= A4_HEIGHT);
-        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && isMouseInsideCanvas){
+        bool isMouseInsideCanvas = (mouseWorldPos.x >=0 && mouseWorldPos.x <= A4_WIDTH &&
+                                    mouseWorldPos.y >=0 && mouseWorldPos.y <= A4_HEIGHT);
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && isMouseInsideCanvas && GetMouseY() > 40){
             isDrawing = true;
             currentStroke = (Stroke){0};
             currentStroke.color = currentBrushColor;
             currentStroke.thickness = currentBrushThickness;
-            AddPointToStroke(&currentStroke,canvasMousePos);
+            AddPointToStroke(&currentStroke,mouseWorldPos);
         }
 
         if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && isDrawing){
             if(currentStroke.pointCount > 0){
                 Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
-                float distSq = (canvasMousePos.x - lastPoint.x)*( canvasMousePos.x - lastPoint.x) + (canvasMousePos.y  - lastPoint.y)*(canvasMousePos.y  - lastPoint.y);
+                float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
                 if(distSq > 9.0f && isMouseInsideCanvas){
-                    AddPointToStroke(&currentStroke, canvasMousePos);
+                    AddPointToStroke(&currentStroke, mouseWorldPos);
                 }
             }
         }
@@ -196,14 +204,10 @@ int main(void){
         BeginDrawing();
         ClearBackground(DARKGRAY);
 
-        DrawRectangle(0, 0, screenWidth, 40, BLACK);
+        BeginMode2D(camera);
+        DrawRectangle(0, 0, A4_WIDTH, A4_HEIGHT, RAYWHITE);
+        DrawRectangleLines( -1, -1, A4_WIDTH + 2, A4_HEIGHT + 2, LIGHTGRAY);
 
-        DrawText(TextFormat("Controls [1] Pen | [2] Highlighter | [U] Undo", doc.activePage + 1, doc.pageCount), 20, 10 ,20, WHITE);
-
-        DrawRectangle(canvasOffset.x, canvasOffset.y, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-        DrawRectangleLines(canvasOffset.x - 1, canvasOffset.y - 1, A4_WIDTH + 2, A4_HEIGHT + 2, LIGHTGRAY);
-
-        BeginMode2D((Camera2D){.offset = canvasOffset, .target = (Vector2){0,0}, .rotation = 0.0f, .zoom = 1.0f});
 
         Page *activePage = &doc.pages[doc.activePage];
 
@@ -228,6 +232,8 @@ int main(void){
 
         }
         EndMode2D();
+        DrawRectangle(0,0, GetScreenWidth(), 40, BLACK);
+        DrawText(TextFormat("Page: %d/%d | [N] New | [< >] Switch| [S] Save | [L] Load | Right-Click: Pan Canvas", doc.activePage + 1, doc.pageCount), 20, 10, 20, WHITE);
         EndDrawing();
     }
 
