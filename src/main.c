@@ -5,111 +5,14 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "include/document.h"
-
+#include "include/memory.h"
+#include "include/file_saving.h"
 #define A4_WIDTH 842
 #define A4_HEIGHT 1191
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
-void AddPointToStroke(Stroke *stroke, Vector2 point){
-    if(stroke->pointCount >= stroke->capacity){
-        stroke->capacity = stroke->capacity == 0 ? 128 : stroke->capacity * 2;
-        stroke->points = (Vector2 *)realloc(stroke->points, stroke->capacity * sizeof(Vector2));
 
-    }
-    stroke->points[stroke->pointCount++] = point;
-}
 
-void AddStrokeToPage(Page *page, Stroke stroke){
-    if(page->strokeCount >= page->capacity){
-        page->capacity = page->capacity == 0 ? 32 : page->capacity * 2;
-        page->strokes = (Stroke *)realloc(page->strokes, page->capacity * sizeof(Stroke));
-
-    }
-    page->strokes[page->strokeCount++] = stroke;
-}
-
-void AddPageToDocument(Document *doc){
-    if(doc->pageCount >= doc->pageCapacity){
-        doc->pageCapacity = doc->pageCapacity == 0 ? 4 : doc->pageCapacity * 2;
-        doc->pages = (Page*)realloc(doc->pages, doc->pageCapacity * sizeof(Page));
-    }
-    doc->pages[doc->pageCount] = (Page){0};
-    doc->activePage = doc->pageCount;
-    doc->pageCount++;
-}
-void FreeDocument(Document *doc){
-    for(int p = 0; p < doc->pageCount;p++){
-        for(int s = 0; s < doc->pages[p].strokeCount; s++){
-            free(doc->pages[p].strokes[s].points);
-        }
-        free(doc->pages[p].strokes);
-    }
-    free(doc->pages);
-    *doc = (Document){0};
-}
-void SaveDocumentBinary(const char *filename, Document *doc){
-    FILE *file = fopen(filename, "wb");
-    if (!file) return;
-
-    char magic[3] = "NTZ";
-    fwrite(magic, sizeof(char),3, file);
-    fwrite(&doc->pageCount, sizeof(int),1,file);
-
-    for(int p = 0; p < doc->pageCount; p++){
-        Page *page = &doc->pages[p];
-        fwrite(&page->strokeCount, sizeof(int),1,file);
-
-        for(int s = 0; s< page->strokeCount;s++){
-            Stroke *stroke = &page->strokes[s];
-            fwrite(&stroke->color, sizeof(Color), 1, file);
-            fwrite(&stroke->thickness, sizeof(float), 1, file);
-            fwrite(&stroke->pointCount, sizeof(int), 1, file);
-
-            fwrite(stroke->points, sizeof(Vector2), stroke->pointCount, file);
-        }
-    }
-    fclose(file);
-}
-
-bool LoadDocumentBinary(const char *filename, Document *doc){
-    FILE *file = fopen(filename, "rb");
-    if (!file) return false;
-    char magic[3];
-    fread(magic, sizeof(char), 3, file);
-    if(strstr(magic, "NTZ") ==NULL){
-        fclose(file);
-        return false;
-    }
-
-    FreeDocument(doc);
-    int totalPages = 0;
-    fread(&totalPages, sizeof(int), 1, file);
-
-    for(int p = 0; p < totalPages; p++){
-        AddPageToDocument(doc);
-        Page *page = &doc->pages[p];
-
-        int totalStrokes = 0;
-        fread(&totalStrokes, sizeof(int), 1, file);
-
-        for(int s = 0; s < totalStrokes; s++){
-            Stroke stroke = {0};
-            fread(&stroke.color, sizeof(Color), 1, file);
-            fread(&stroke.thickness, sizeof(float), 1, file);
-            fread(&stroke.pointCount, sizeof(int), 1, file);
-
-            stroke.capacity = stroke.pointCount;
-            stroke.points = (Vector2 *)malloc(stroke.capacity *sizeof(Vector2));
-            fread(stroke.points,sizeof(Vector2), stroke.pointCount, file);
-
-            AddStrokeToPage(page, stroke);
-        }
-    }
-
-    doc->activePage = 0;
-    fclose(file);
-    return true;
-}
 void UndoLastStrokes(Page *activePage){
     if(activePage->strokeCount > 0){
         activePage->strokeCount--;
