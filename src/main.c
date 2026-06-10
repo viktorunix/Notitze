@@ -35,7 +35,8 @@ int main(void){
 
     Stroke currentStroke = {0};
     bool isDrawing = false;
-
+    Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
+    int selectedColorIndex = 0;
     Color currentBrushColor = BLACK;
     float currentBrushThickness = 3.0f;
 
@@ -69,6 +70,14 @@ int main(void){
         if(IsKeyPressed(KEY_U)){
             UndoLastStrokes(&(doc.pages[doc.activePage]));
         }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && GetMouseY() < 40){
+            for(int i = 0; i < 5; i++){
+                int swatchX = 600 + (i * 40);
+                if(GetMouseX() >= swatchX && GetMouseX() <= swatchX + 30){
+                    selectedColorIndex = i;
+                }
+            }
+        }
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)){
             Vector2 delta = GetMouseDelta();
             camera.offset.x +=delta.x;
@@ -101,7 +110,7 @@ int main(void){
             isDrawing = true;
             doc.activePage = hoveredPage;
             currentStroke = (Stroke){0};
-            currentStroke.color = currentBrushColor;
+            currentStroke.color = pallete[selectedColorIndex];
             currentStroke.thickness = currentBrushThickness;
             AddPointToStroke(&currentStroke,localMousePos);
         }
@@ -163,7 +172,17 @@ int main(void){
 
         EndMode2D();
         DrawRectangle(0,0, GetScreenWidth(), 40, BLACK);
-        DrawText(TextFormat("Page: %d/%d | [N] New | [< >] Switch| [S] Save | [L] Load | Right-Click: Pan Canvas", doc.activePage + 1, doc.pageCount), 20, 10, 20, WHITE);
+        DrawText(TextFormat(" [N] New [S] Save | [L] Load | Right-Click: Pan Canvas", doc.activePage + 1, doc.pageCount), 20, 10, 20, WHITE);
+
+        for(int i = 0; i<5;i++){
+            int swatchX = 600 + (i*40);
+
+            if(i == selectedColorIndex){
+                DrawRectangle(swatchX - 2, 3,34,34, WHITE);
+
+            }
+            DrawRectangle(swatchX, 5, 30, 30, pallete[i]);
+        }
         EndDrawing();
     }
 
