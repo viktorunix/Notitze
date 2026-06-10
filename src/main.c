@@ -9,6 +9,7 @@
 #define A4_WIDTH 842
 #define A4_HEIGHT 1191
 #define SAVE_FILE "test.ntz"
+#define PAGE_GAP 60
 void AddPointToStroke(Stroke *stroke, Vector2 point){
     if(stroke->pointCount >= stroke->capacity){
         stroke->capacity = stroke->capacity == 0 ? 128 : stroke->capacity * 2;
@@ -170,16 +171,36 @@ int main(void){
             camera.offset.x +=delta.x;
             camera.offset.y +=delta.y;
         }
-        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+        float wheel = GetMouseWheelMove();
+        if(wheel != 0){
+            Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
-        bool isMouseInsideCanvas = (mouseWorldPos.x >=0 && mouseWorldPos.x <= A4_WIDTH &&
-                                    mouseWorldPos.y >=0 && mouseWorldPos.y <= A4_HEIGHT);
+            camera.offset = GetMousePosition();
+            camera.target = mouseWorldPos;
+
+            const float zoomIncrement = 0.125f;
+            camera.zoom += (wheel * zoomIncrement);
+
+            if (camera.zoom < 0.25f) camera.zoom = 0.25;
+            if (camera.zoom > 5.0f) camera.zoom = 5.0f;
+        }
+        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+        int hoveredPage = (int)(mouseWorldPos.y / (A4_HEIGHT + PAGE_GAP));
+        if(mouseWorldPos.y < 0) hoveredPage = -1;
+        float localMouseY = mouseWorldPos.y - (hoveredPage *(A4_HEIGHT + PAGE_GAP));
+        Vector2 localMousePos = {mouseWorldPos.x, localMouseY};
+
+        bool isMouseInsideCanvas = (hoveredPage >= 0 && hoveredPage < doc.pageCount &&
+                                    localMousePos.x >= 0 && localMousePos.x <= A4_WIDTH &&
+                                    localMouseY >= 0 && localMouseY <= A4_HEIGHT);
+
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && isMouseInsideCanvas && GetMouseY() > 40){
             isDrawing = true;
+            doc.activePage = hoveredPage;
             currentStroke = (Stroke){0};
             currentStroke.color = currentBrushColor;
             currentStroke.thickness = currentBrushThickness;
-            AddPointToStroke(&currentStroke,mouseWorldPos);
+            AddPointToStroke(&currentStroke,localMousePos);
         }
 
         if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && isDrawing){
@@ -187,7 +208,7 @@ int main(void){
                 Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
                 float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
                 if(distSq > 9.0f && isMouseInsideCanvas){
-                    AddPointToStroke(&currentStroke, mouseWorldPos);
+                    AddPointToStroke(&currentStroke, localMousePos);
                 }
             }
         }
@@ -205,32 +226,38 @@ int main(void){
         ClearBackground(DARKGRAY);
 
         BeginMode2D(camera);
-        DrawRectangle(0, 0, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-        DrawRectangleLines( -1, -1, A4_WIDTH + 2, A4_HEIGHT + 2, LIGHTGRAY);
+        for(int p = 0; p< doc.pageCount; p++){
+            float pageYOffset = p * (A4_HEIGHT + PAGE_GAP);
 
+            DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
+            DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
+            DrawRectangleLines(0, pageYOffset, A4_WIDTH, A4_HEIGHT, LIGHTGRAY);
 
-        Page *activePage = &doc.pages[doc.activePage];
+            Page *page = &doc.pages[p];
 
-        for(int i = 0; i <activePage->strokeCount;i++){
-            Stroke *s = &activePage->strokes[i];
-            for(int j = 0; j< s->pointCount - 1;j++){
-                DrawLineEx(s->points[j], s->points[j+1], s->thickness, s->color);
-                DrawCircleV(s->points[j], s->thickness/2.0f, s->color);
+            for(int i = 0; i< page->strokeCount; i++){
+                Stroke *s = &page->strokes[i];
+                for(int j = 0; j< s->pointCount - 1;j++){
+                    Vector2 p1 = {s->points[j].x, s->points[j].y + pageYOffset};
+                    Vector2 p2 = {s->points[j+1].x, s->points[j+1].y + pageYOffset};
+                    DrawLineEx(p1, p2, s->thickness, s->color);
+                    DrawCircleV(p1, s->thickness / 2.0f, s->color);
+                }
+                if(s->pointCount > 0){
+                    Vector2 lastP = {s->points[s->pointCount - 1].x, s->points[s->pointCount - 1].y + pageYOffset};
+                    DrawCircleV(lastP, s->thickness/2.0f, s->color);
+                }
             }
-            if(s->pointCount >0)
-                DrawCircleV(s->points[s->pointCount - 1], s->thickness/2.0f, s->color);
+            if(isDrawing && p == doc.activePage){
+                for(int j = 0; j< currentStroke.pointCount - 1; j++){
+                    Vector2 p1 = {currentStroke.points[j].x, currentStroke.points[j].y + pageYOffset};
+                    Vector2 p2 = {currentStroke.points[j+1].x, currentStroke.points[j+1].y + pageYOffset};
+                    DrawLineEx(p1, p2, currentStroke.thickness, currentStroke.color);
+                    DrawCircleV(p1, currentStroke.thickness / 2.0f, currentStroke.color);
+                }
+            }
         }
 
-        if(isDrawing){
-            for(int j = 0;j< currentStroke.pointCount - 1; j++){
-                DrawLineEx(currentStroke.points[j], currentStroke.points[j+1], currentStroke.thickness, currentStroke.color);
-                DrawCircleV(currentStroke.points[j], currentStroke.thickness/2.0f, currentStroke.color);
-
-            }
-            if (currentStroke.pointCount > 0)
-                DrawCircleV(currentStroke.points[currentStroke.pointCount - 1], currentStroke.thickness/2.0f, currentStroke.color);
-
-        }
         EndMode2D();
         DrawRectangle(0,0, GetScreenWidth(), 40, BLACK);
         DrawText(TextFormat("Page: %d/%d | [N] New | [< >] Switch| [S] Save | [L] Load | Right-Click: Pan Canvas", doc.activePage + 1, doc.pageCount), 20, 10, 20, WHITE);
