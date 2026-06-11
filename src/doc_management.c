@@ -37,3 +37,22 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
     }
     *currentStroke = (Stroke){0};
 }
+
+void MovePageToIndex(Document *doc, int fromIndex, int toIndex){
+    if(fromIndex == toIndex) return;
+    if(toIndex < 0) toIndex = 0;
+    if(toIndex >= doc->pageCount) toIndex = doc->pageCount - 1;
+
+    Page temp = doc->pages[fromIndex];
+    if(fromIndex < toIndex){
+        for(int i = fromIndex; i <toIndex;i++){
+            doc->pages[i] = doc->pages[i + 1];
+        }
+    }else {
+        for(int i = fromIndex; i > toIndex; i--){
+            doc->pages[i] = doc->pages[i - 1];
+        }
+    }
+    doc->pages[toIndex] = temp;
+    doc->activePage = toIndex;
+}

@@ -1,5 +1,5 @@
 #ifndef GUI
 #define GUI
 #include "raylib.h"
-bool GUI_Button (Rectangle bounds, const char *text);
+bool GUIButton (Rectangle bounds, const char *text);
 #endif
