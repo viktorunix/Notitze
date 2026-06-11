@@ -6,4 +6,5 @@
 
 void SaveDocumentBinary(const char *filename, Document *doc);
 bool LoadDocumentBinary(const char *filename, Document *doc);
+void DeleteActivePage(Document *doc);
 #endif

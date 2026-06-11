@@ -7,4 +7,5 @@ void AddPointToStroke(Stroke *stroke, Vector2 point);
 void AddStrokeToPage(Page *page, Stroke stroke);
 void AddPageToDocument(Document *doc);
 void FreeDocument(Document *doc);
+void DeleteActivePage(Document *doc);
 #endif

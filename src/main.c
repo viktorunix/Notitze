@@ -7,22 +7,14 @@
 #include "include/document.h"
 #include "include/memory.h"
 #include "include/file_saving.h"
+#include "include/doc_management.h"
 #define A4_WIDTH 842
 #define A4_HEIGHT 1191
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
 
-void UndoLastStrokes(Page *activePage){
-    if(activePage->strokeCount > 0){
-        activePage->strokeCount--;
 
-        free(activePage->strokes[activePage->strokeCount].points);
-        activePage->strokes[activePage->strokeCount].points = NULL;
-        activePage->strokes[activePage->strokeCount].pointCount = 0;
-        activePage->strokes[activePage->strokeCount].capacity = 0;
-    }
-}
 int main(void){
     const int screenWidth = 1400;
     const int screenHeight = 900;
@@ -70,6 +62,13 @@ int main(void){
         if(IsKeyPressed(KEY_U)){
             UndoLastStrokes(&(doc.pages[doc.activePage]));
         }
+        if (IsKeyPressed(KEY_DELETE)){
+            DeleteActivePage(&doc);
+        }
+        if(IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_UP))
+            MoveActivePageUp(&doc);
+        if(IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_DOWN))
+            MoveActivePageDown(&doc);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && GetMouseY() < 40){
             for(int i = 0; i < 5; i++){
                 int swatchX = 600 + (i * 40);
@@ -141,10 +140,12 @@ int main(void){
         for(int p = 0; p< doc.pageCount; p++){
             float pageYOffset = p * (A4_HEIGHT + PAGE_GAP);
 
+            Color borderColor = (p == doc.activePage) ? SKYBLUE: LIGHTGRAY;
+            int borderThickness = (p == doc.activePage) ? 4 : 1;
+
             DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
             DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-            DrawRectangleLines(0, pageYOffset, A4_WIDTH, A4_HEIGHT, LIGHTGRAY);
-
+            DrawRectangleLinesEx((Rectangle){0, pageYOffset, A4_WIDTH, A4_HEIGHT}, borderThickness, borderColor);
             Page *page = &doc.pages[p];
 
             for(int i = 0; i< page->strokeCount; i++){

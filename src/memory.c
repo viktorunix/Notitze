@@ -36,3 +36,20 @@ void FreeDocument(Document *doc){
     free(doc->pages);
     *doc = (Document){0};
 }
+
+void DeleteActivePage(Document *doc){
+    if (doc->pageCount <= 1) return;
+    int p = doc->activePage;
+    for(int s = 0; s < doc->pages[p].strokeCount; s++){
+        free(doc->pages[p].strokes[s].points);
+    }
+    free(doc->pages[p].strokes);
+    for (int i = p; i < doc->pageCount - 1; i++){
+        doc->pages[i] = doc->pages[i + 1];
+    }
+    doc->pageCount--;
+
+    if(doc->activePage >= doc->pageCount){
+        doc->activePage = doc->pageCount - 1;
+    }
+}
