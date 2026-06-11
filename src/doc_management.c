@@ -28,3 +28,12 @@ void UndoLastStrokes(Page *activePage){
         activePage->strokes[activePage->strokeCount].capacity = 0;
     }
 }
+
+void FinishStroke(Stroke *currentStroke, Document *doc){
+    if(currentStroke->pointCount > 1){
+        AddStrokeToPage(&doc->pages[doc->activePage], *currentStroke);
+    } else{
+        free(currentStroke->points);
+    }
+    *currentStroke = (Stroke){0};
+}

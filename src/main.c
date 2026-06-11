@@ -121,16 +121,15 @@ int main(void){
                 if(distSq > 9.0f && isMouseInsideCanvas){
                     AddPointToStroke(&currentStroke, localMousePos);
                 }
+                if(!isMouseInsideCanvas){
+                    FinishStroke(&currentStroke, &doc);
+                    //isDrawing = false;
+                }
             }
         }
         if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && isDrawing){
             isDrawing = false;
-            if(currentStroke.pointCount > 1){
-                AddStrokeToPage(&doc.pages[doc.activePage], currentStroke);
-            } else{
-                free(currentStroke.points);
-            }
-            currentStroke = (Stroke){0};
+            FinishStroke(&currentStroke, &doc);
         }
 
         BeginDrawing();
