@@ -62,3 +62,41 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     fclose(file);
     return true;
 }
+
+
+const char *ShowSaveFileDialog(){
+#ifdef _WIN32
+    static char filename[MAX_PATH] = "";
+    OPENFILENAME ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+    ofn.lpstrDefExt = "ntz";
+
+    if(GetSaveFileName(&ofn)){
+        return filename;
+    }
+#endif
+    return NULL;
+}
+
+const char* ShowOpenFileDialog() {
+#ifdef _WIN32
+    static char filename[MAX_PATH] = "";
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.lpstrDefExt = "ntz";
+
+    if (GetOpenFileNameA(&ofn)) return filename;
+#endif
+    return NULL; 
+}

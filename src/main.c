@@ -249,10 +249,16 @@ int main(void){
 
         if(GUIButton((Rectangle){120, 10, 100, 30}, "New Page"))
             AddPageToDocument(&doc);
-        if(GUIButton((Rectangle){230, 10, 80, 30}, "Save"))
-            SaveDocumentBinary(SAVE_FILE, &doc);
-        if(GUIButton((Rectangle){320, 10, 80, 30}, "Load"))
-            LoadDocumentBinary(SAVE_FILE, &doc);
+        if(GUIButton((Rectangle){230, 10, 80, 30}, "Save")){
+            const char *savePath = ShowSaveFileDialog();
+            if(savePath)
+                SaveDocumentBinary(savePath, &doc);
+        }
+        if(GUIButton((Rectangle){320, 10, 80, 30}, "Load")){
+            const char *openPath = ShowOpenFileDialog();
+            if(openPath)
+                LoadDocumentBinary(openPath, &doc);
+        }
         if(GUIButton((Rectangle){410, 10, 80, 30}, "Undo"))
             UndoLastStrokes(&doc.pages[doc.activePage]);
         if(GUIButton((Rectangle){500, 10, 80, 30}, "Delete"))
