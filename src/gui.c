@@ -34,7 +34,32 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
             DrawCircleV(last, stroke->thickness/2.0f, stroke->color);
         }
     }
+    else if (stroke->type == BRUSH_PENCIL){
+        Color graphite = stroke->color;
+        graphite.a = 100;
 
+        for(int j = 0; j< stroke->pointCount - 1; j++){
+            Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
+            Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
+
+            SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
+
+            float dist = Vector2Distance(p1, p2);
+            Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
+
+            for(float d = 0; d < dist; d+= 1.0f){
+                Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
+
+                for(int k = 0; k <3; k++){
+                    float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                    float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+
+                    Vector2 speck = {basePos.x + randX, basePos.y + randY};
+                    DrawCircleV(speck, 0.5f, graphite);
+                }
+            }
+        }
+    }
     else if (stroke->pointCount >= 2){
         printf("DAAA %d\n", stroke->pointCount);
         Vector2 p1 = {stroke->points[0].x, stroke->points[0].y + pageYOffset};

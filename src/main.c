@@ -145,7 +145,7 @@ int main(void){
         if(draggedPage != -1){
 
         } else if(isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            if(activeBrush == BRUSH_PEN || activeBrush == BRUSH_HIGHLIGHTER){
+            if(activeBrush == BRUSH_PEN || activeBrush == BRUSH_HIGHLIGHTER || activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
                     float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
@@ -245,10 +245,11 @@ int main(void){
 
         int toolX = 20;
         if(GUIButton((Rectangle){toolX, 10,60, 40}, "Pen", activeBrush == BRUSH_PEN)) activeBrush = BRUSH_PEN;
-        if(GUIButton((Rectangle){toolX += 70, 10, 100, 40}, "Highlighter", activeBrush == BRUSH_HIGHLIGHTER)) activeBrush = BRUSH_HIGHLIGHTER;
+        if(GUIButton((Rectangle){toolX +=60, 10, 75, 40}, "Pencil", activeBrush == BRUSH_PENCIL)) activeBrush = BRUSH_PENCIL;
+        if(GUIButton((Rectangle){toolX += 85, 10, 100, 40}, "Highlighter", activeBrush == BRUSH_HIGHLIGHTER)) activeBrush = BRUSH_HIGHLIGHTER;
         if(GUIButton((Rectangle){toolX += 110, 10, 60, 40}, "Line", activeBrush == BRUSH_LINE)) activeBrush = BRUSH_LINE;
         if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Rect", activeBrush == BRUSH_RECTANGLE)) activeBrush = BRUSH_RECTANGLE;
-        if(GUIButton((Rectangle){toolX += 80, 10, 70, 40}, "Circle", activeBrush == BRUSH_CIRCLE)) activeBrush = BRUSH_CIRCLE;
+        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Circle", activeBrush == BRUSH_CIRCLE)) activeBrush = BRUSH_CIRCLE;
 
         int centerX = GetScreenWidth() / 2;
         DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount), centerX - 250, 20, 20, WHITE);
@@ -296,7 +297,7 @@ int main(void){
             if(GUIButton((Rectangle){btnX, boxY+130, 180, 40}, "Lined", doc.pattern == BG_LINED)) doc.pattern = BG_LINED;
             if(GUIButton((Rectangle){btnX, boxY+180, 180, 40}, "Grid", doc.pattern == BG_GRID)) doc.pattern = BG_GRID;
             if(GUIButton((Rectangle){btnX, boxY+230, 180, 40}, "Dots", doc.pattern == BG_DOTS)) doc.pattern =BG_DOTS;
-            
+
 
         }
         EndDrawing();
