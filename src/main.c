@@ -9,8 +9,7 @@
 #include "include/file_saving.h"
 #include "include/doc_management.h"
 #include "include/gui.h"
-#define A4_WIDTH 842
-#define A4_HEIGHT 1191
+
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 #define UI_HEIGHT 60
@@ -45,11 +44,12 @@ int main(void){
     SetWindowMinSize(800, 600);
     Document doc = {0};
     AddPageToDocument(&doc);
-
+    doc.pattern = BG_BLANK;
     BrushType activeBrush = BRUSH_PEN;
     Stroke currentStroke = {0};
     bool isDrawing = false;
     bool isPanning = false;
+    bool showSettings = false;
     int draggedPage = -1;
     float dragOffsetY = 0.0f;
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
@@ -69,7 +69,7 @@ int main(void){
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
-        bool guiClicked = false;
+        bool guiClicked = showSettings;
 
         InputHandler(&doc);
 
@@ -82,7 +82,7 @@ int main(void){
             currentBrushThickness = 20.0f;
         }
         // ui bar
-        if(mousePos.y < 50){
+        if(mousePos.y < UI_HEIGHT && !showSettings){
             guiClicked = true;
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 for(int i = 0; i < 5; i++){
@@ -199,6 +199,7 @@ int main(void){
             //paper
             DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
             DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
+            DrawPageBackground(doc.pattern, pageYOffset);
 
             //paper drag bar
             DrawRectangle(0, pageYOffset, A4_WIDTH, 40, (Color){200,200,200,255});
@@ -264,6 +265,7 @@ int main(void){
         if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc.pages[doc.activePage]);
         if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(&doc);
 
+        if(GUIButton((Rectangle){centerX + 250, 10, 90, 40}, "Settings", showSettings)) showSettings = !showSettings;
         for(int i = 0; i<5;i++){
             int swatchX = GetScreenWidth() - 250 + (i * 45);
             Vector2 center = {swatchX + 20, UI_HEIGHT / 2.0f};
@@ -275,6 +277,27 @@ int main(void){
             }
             DrawCircleV(center, 16, pallete[i]);
             DrawCircleLines(center.x, center.y, 16, (Color){0,0,0,100});
+        }
+        // settings page
+        if(showSettings){
+            DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
+
+            int boxW = 400;
+            int boxH = 300;
+            int boxX = (GetScreenWidth() - boxW)/2;
+            int boxY = (GetScreenHeight() - boxH)/2;
+
+            DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.1f, 10, (Color){40, 40, 40, 255});
+            DrawRectangleRoundedLinesEx((Rectangle){boxX, boxY, boxW, boxH}, 0.1f, 10, 2.0f, DARKGRAY);
+            DrawText("Document Background", boxX + 60, boxY + 30, 25, WHITE);
+
+            int btnX = boxX + 110;
+            if(GUIButton((Rectangle){btnX, boxY+80, 180, 40}, "Blank", doc.pattern == BG_BLANK)) doc.pattern = BG_BLANK;
+            if(GUIButton((Rectangle){btnX, boxY+130, 180, 40}, "Lined", doc.pattern == BG_LINED)) doc.pattern = BG_LINED;
+            if(GUIButton((Rectangle){btnX, boxY+180, 180, 40}, "Grid", doc.pattern == BG_GRID)) doc.pattern = BG_GRID;
+            if(GUIButton((Rectangle){btnX, boxY+230, 180, 40}, "Dots", doc.pattern == BG_DOTS)) doc.pattern =BG_DOTS;
+            
+
         }
         EndDrawing();
     }

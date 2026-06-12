@@ -6,7 +6,7 @@ void SaveDocumentBinary(const char *filename, Document *doc){
     char magic[3] = "NTZ";
     fwrite(magic, sizeof(char),3, file);
     fwrite(&doc->pageCount, sizeof(int),1,file);
-
+    fwrite(&doc->pattern, sizeof(int), 1, file);
     for(int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         fwrite(&page->strokeCount, sizeof(int),1,file);
@@ -37,6 +37,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     int totalPages = 0;
     fread(&totalPages, sizeof(int), 1, file);
 
+    fread(&doc->pattern, sizeof(int), 1, file);
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
         Page *page = &doc->pages[p];

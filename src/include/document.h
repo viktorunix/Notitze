@@ -4,7 +4,12 @@
 #include "raymath.h"
 #include "brush.h"
 
-
+typedef enum {
+    BG_BLANK = 0,
+    BG_LINED,
+    BG_GRID,
+    BG_DOTS
+} BgPattern;
 typedef struct {
     Vector2 *points;
     int pointCount;
@@ -24,5 +29,6 @@ typedef struct {
     int pageCount;
     int pageCapacity;
     int activePage;
+    BgPattern pattern;
 } Document;
 #endif

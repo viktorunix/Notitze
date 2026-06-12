@@ -58,3 +58,29 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
         }
     }
 }
+
+void DrawPageBackground(BgPattern pattern, float pageYOffset){
+    Color lineColor = (Color){200, 215, 230, 255};
+    Color marginColor = (Color){255, 150, 150, 180};
+
+    if (pattern == BG_LINED){
+        DrawLine(80, pageYOffset, 80, pageYOffset + A4_HEIGHT, marginColor);
+        for(int y = 80; y < A4_HEIGHT; y+=30){
+            DrawLine(0, pageYOffset + y, A4_WIDTH, pageYOffset + y, lineColor);
+        }
+    }
+    else if(pattern == BG_GRID){
+        for(int x = 30; x < A4_WIDTH; x+=30)
+            DrawLine(x, pageYOffset, x, pageYOffset + A4_HEIGHT, lineColor);
+        for(int y = 30; y < A4_HEIGHT; y+=30)
+            DrawLine(0, pageYOffset + y, A4_WIDTH, pageYOffset + y, lineColor);
+
+
+    }
+    else if (pattern == BG_DOTS){
+        for(int x = 30; x < A4_WIDTH; x+=30){
+            for(int y = 30; y < A4_HEIGHT; y+=30)
+                DrawCircle(x, pageYOffset + y, 2.0f, lineColor);
+        }
+    }
+} 
