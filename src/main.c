@@ -13,7 +13,7 @@
 #define A4_HEIGHT 1191
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
-
+#define UI_HEIGHT 60
 
 void InputHandler(Document *doc){
     if(IsKeyPressed(KEY_N))
@@ -46,6 +46,7 @@ int main(void){
     Document doc = {0};
     AddPageToDocument(&doc);
 
+    BrushType activeBrush = BRUSH_PEN;
     Stroke currentStroke = {0};
     bool isDrawing = false;
     bool isPanning = false;
@@ -118,7 +119,9 @@ int main(void){
                     dragOffsetY = mouseWorldPos.y - (hoveredPage * (A4_HEIGHT + PAGE_GAP));
                 } else{
                     isDrawing = true;
+
                     currentStroke = (Stroke){0};
+                    currentStroke.type = activeBrush;
                     currentStroke.color = pallete[selectedColorIndex];
                     currentStroke.thickness = currentBrushThickness;
                     AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
@@ -142,15 +145,24 @@ int main(void){
         if(draggedPage != -1){
 
         } else if(isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            if(currentStroke.pointCount > 0){
-                Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
-                float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
-                if(distSq > 9.0f && hoveredPage == doc.activePage){
-                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+            if(activeBrush == BRUSH_PEN || activeBrush == BRUSH_HIGHLIGHTER){
+                if(currentStroke.pointCount > 0){
+                    Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
+                    float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
+                    if(distSq > 9.0f && hoveredPage == doc.activePage){
+                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                    }
                 }
                 if(!isMouseInsideCanvas){
                     FinishStroke(&currentStroke, &doc);
                     //isDrawing = false;
+                }
+            } else {
+                //shapes
+                if(currentStroke.pointCount == 1){
+                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                } else if (currentStroke.pointCount == 2){
+                    currentStroke.points[1] = (Vector2){mouseWorldPos.x, localMouseY};
                 }
             }
         } else if(isPanning){
@@ -200,28 +212,11 @@ int main(void){
 
             //strokes
             Page *page = &doc.pages[p];
-            for(int i = 0; i< page->strokeCount; i++){
-                Stroke *s = &page->strokes[i];
-                for(int j = 0; j< s->pointCount - 1;j++){
-                    Vector2 p1 = {s->points[j].x, s->points[j].y + pageYOffset};
-                    Vector2 p2 = {s->points[j+1].x, s->points[j+1].y + pageYOffset};
-                    DrawLineEx(p1, p2, s->thickness, s->color);
-                    DrawCircleV(p1, s->thickness / 2.0f, s->color);
-                }
-                if(s->pointCount > 0){
-                    Vector2 lastP = {s->points[s->pointCount - 1].x, s->points[s->pointCount - 1].y + pageYOffset};
-                    DrawCircleV(lastP, s->thickness/2.0f, s->color);
-                }
-            }
+            for(int i = 0; i < page->strokeCount; i++) 
+                RenderStroke(&page->strokes[i], pageYOffset);
             // real-time stroke
-            if(isDrawing && p == doc.activePage){
-                for(int j = 0; j< currentStroke.pointCount - 1; j++){
-                    Vector2 p1 = {currentStroke.points[j].x, currentStroke.points[j].y + pageYOffset};
-                    Vector2 p2 = {currentStroke.points[j+1].x, currentStroke.points[j+1].y + pageYOffset};
-                    DrawLineEx(p1, p2, currentStroke.thickness, currentStroke.color);
-                    DrawCircleV(p1, currentStroke.thickness / 2.0f, currentStroke.color);
-                }
-            }
+            if(isDrawing && p == doc.activePage)
+                RenderStroke(&currentStroke, pageYOffset);
         }
         // dragged page preview
         if(draggedPage != -1){
@@ -247,32 +242,39 @@ int main(void){
         DrawRectangle(0,0, GetScreenWidth(), 50, (Color){50,50,50,255});
         DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount),10, 15, 20, WHITE);
 
-        if(GUIButton((Rectangle){120, 10, 100, 30}, "New Page"))
-            AddPageToDocument(&doc);
-        if(GUIButton((Rectangle){230, 10, 80, 30}, "Save")){
+        int toolX = 20;
+        if(GUIButton((Rectangle){toolX, 10,60, 40}, "Pen", activeBrush == BRUSH_PEN)) activeBrush = BRUSH_PEN;
+        if(GUIButton((Rectangle){toolX += 70, 10, 100, 40}, "Highlighter", activeBrush == BRUSH_HIGHLIGHTER)) activeBrush = BRUSH_HIGHLIGHTER;
+        if(GUIButton((Rectangle){toolX += 110, 10, 60, 40}, "Line", activeBrush == BRUSH_LINE)) activeBrush = BRUSH_LINE;
+        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Rect", activeBrush == BRUSH_RECTANGLE)) activeBrush = BRUSH_RECTANGLE;
+        if(GUIButton((Rectangle){toolX += 80, 10, 70, 40}, "Circle", activeBrush == BRUSH_CIRCLE)) activeBrush = BRUSH_CIRCLE;
+
+        int centerX = GetScreenWidth() / 2;
+        DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount), centerX - 250, 20, 20, WHITE);
+
+        if(GUIButton((Rectangle){centerX - 130, 10, 70, 40}, "New", false)) AddPageToDocument(&doc);
+        if(GUIButton((Rectangle){centerX - 50, 10, 70, 40}, "Save", false)) {
             const char *savePath = ShowSaveFileDialog();
-            if(savePath)
-                SaveDocumentBinary(savePath, &doc);
+            if(savePath) SaveDocumentBinary(savePath, &doc);
         }
-        if(GUIButton((Rectangle){320, 10, 80, 30}, "Load")){
+        if(GUIButton((Rectangle){centerX + 30, 10, 70, 40}, "Load", false)) {
             const char *openPath = ShowOpenFileDialog();
-            if(openPath)
-                LoadDocumentBinary(openPath, &doc);
+            if(openPath) LoadDocumentBinary(openPath, &doc);
         }
-        if(GUIButton((Rectangle){410, 10, 80, 30}, "Undo"))
-            UndoLastStrokes(&doc.pages[doc.activePage]);
-        if(GUIButton((Rectangle){500, 10, 80, 30}, "Delete"))
-            DeleteActivePage(&doc);
+        if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc.pages[doc.activePage]);
+        if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(&doc);
 
         for(int i = 0; i<5;i++){
-            int swatchX = GetScreenWidth() - 200 + (i * 40);
+            int swatchX = GetScreenWidth() - 250 + (i * 45);
+            Vector2 center = {swatchX + 20, UI_HEIGHT / 2.0f};
 
 
             if(i == selectedColorIndex){
-                DrawRectangle(swatchX - 2, 8,34,34, WHITE);
+                DrawCircleV(center, 20, WHITE);
 
             }
-            DrawRectangle(swatchX, 10, 30, 30, pallete[i]);
+            DrawCircleV(center, 16, pallete[i]);
+            DrawCircleLines(center.x, center.y, 16, (Color){0,0,0,100});
         }
         EndDrawing();
     }

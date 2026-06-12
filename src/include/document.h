@@ -11,6 +11,7 @@ typedef struct {
     int capacity;
     Color color;
     float thickness;
+    BrushType type;
 } Stroke;
 
 typedef struct {

@@ -30,7 +30,8 @@ void UndoLastStrokes(Page *activePage){
 }
 
 void FinishStroke(Stroke *currentStroke, Document *doc){
-    if(currentStroke->pointCount > 1){
+    if((currentStroke->type <= BRUSH_HIGHLIGHTER && currentStroke->pointCount > 1) ||
+       (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
         AddStrokeToPage(&doc->pages[doc->activePage], *currentStroke);
     } else{
         free(currentStroke->points);
