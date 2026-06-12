@@ -86,7 +86,7 @@ int main(void){
             guiClicked = true;
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 for(int i = 0; i < 5; i++){
-                    int swatchX = 600 + (i * 40);
+                    int swatchX = GetScreenWidth() - 250 + (i * 45);
                     if(GetMouseX() >= swatchX && GetMouseX() <= swatchX + 30){
                         selectedColorIndex = i;
                     }
