@@ -55,6 +55,7 @@ int main(void){
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
     int selectedColorIndex = 0;
     Color currentBrushColor = BLACK;
+
     float currentBrushThickness = 3.0f;
 
     //Vector2 canvasOffset = { (screenWidth - A4_WIDTH) / 2.0f, 20.0f};
@@ -251,9 +252,10 @@ int main(void){
         if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Rect", activeBrush == BRUSH_RECTANGLE)) activeBrush = BRUSH_RECTANGLE;
         if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Circle", activeBrush == BRUSH_CIRCLE)) activeBrush = BRUSH_CIRCLE;
 
+        
         int centerX = GetScreenWidth() / 2;
         DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount), centerX - 250, 20, 20, WHITE);
-
+        GUISlider((Rectangle){centerX - 200, 10, 120, 16}, &currentBrushThickness, 1.0f, 99.0f);
         if(GUIButton((Rectangle){centerX - 130, 10, 70, 40}, "New", false)) AddPageToDocument(&doc);
         if(GUIButton((Rectangle){centerX - 50, 10, 70, 40}, "Save", false)) {
             const char *savePath = ShowSaveFileDialog();

@@ -19,7 +19,35 @@ bool GUIButton (Rectangle bounds, const char *text, bool isActive){
     return isClicked;
     
 }
+void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue){
+    Vector2 mousePos = GetMousePosition();
 
+    Rectangle hitBox = {bounds.x - 10, bounds.y - 10, bounds.width + 20, bounds.height + 20};
+
+    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mousePos, hitBox)){
+        float normalized = (mousePos.x - bounds.x) / bounds.width;
+        if(normalized < 0.0f) normalized = 0.0f;
+        if(normalized >= 1.0f) normalized = 1.0f;
+        *value = minValue + normalized * (maxValue - minValue);
+    }
+
+    //background
+    DrawRectangleRounded(bounds, 1.0f, 10, (Color) {35,35,40, 255});
+    DrawRectangleRoundedLinesEx(bounds, 1.0f, 10, 1.5f, (Color){90, 90, 95, 255});
+
+    //filled portion
+    float currentNorm = (*value - minValue) / (maxValue - minValue);
+    if(currentNorm > 0.02f){
+        Rectangle fillRec = {bounds.x, bounds.y, bounds.width * currentNorm, bounds.height};
+        DrawRectangleRounded(fillRec, 1.0f, 10, (Color){70, 130, 180, 255});
+
+    }
+
+    //knob
+    Vector2 knobCenter = {bounds.x + bounds.width * currentNorm, bounds.y + bounds.height / 2.0f};
+    DrawCircleV(knobCenter, bounds.height * 0.8f, WHITE);
+    DrawCircleLines(knobCenter.x, knobCenter.y, bounds.height * 0.8f, GRAY);
+}
 void RenderStroke(Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
