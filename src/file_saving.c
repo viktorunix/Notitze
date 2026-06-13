@@ -13,6 +13,7 @@ void SaveDocumentBinary(const char *filename, Document *doc){
 
         for(int s = 0; s< page->strokeCount;s++){
             Stroke *stroke = &page->strokes[s];
+            fwrite(&stroke->type,sizeof(BrushType), 1, file);
             fwrite(&stroke->color, sizeof(Color), 1, file);
             fwrite(&stroke->thickness, sizeof(float), 1, file);
             fwrite(&stroke->pointCount, sizeof(int), 1, file);
@@ -47,6 +48,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
 
         for(int s = 0; s < totalStrokes; s++){
             Stroke stroke = {0};
+            fread(&stroke.type, sizeof(BrushType),1,file);
             fread(&stroke.color, sizeof(Color), 1, file);
             fread(&stroke.thickness, sizeof(float), 1, file);
             fread(&stroke.pointCount, sizeof(int), 1, file);
