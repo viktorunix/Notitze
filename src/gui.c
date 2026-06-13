@@ -78,7 +78,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
             for(float d = 0; d < dist; d+= 1.0f){
                 Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
 
-                for(int k = 0; k <3; k++){
+                for(int k = 0; k <2 * stroke->thickness; k++){
                     float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
                     float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
 

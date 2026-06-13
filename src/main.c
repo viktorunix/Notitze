@@ -2,13 +2,14 @@
 #include <string.h>
 #include <stdio.h>
 #include "include/raylib.h"
-#include "raylib.h"
-#include "raymath.h"
+#include "include/raylib.h"
+#include "include/raymath.h"
 #include "include/document.h"
 #include "include/memory.h"
 #include "include/file_saving.h"
 #include "include/doc_management.h"
 #include "include/gui.h"
+#include "include/settings.h"
 
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
@@ -47,7 +48,8 @@ int main(void){
     doc.pattern = BG_BLANK;
     BrushType activeBrush = BRUSH_PEN;
     Stroke currentStroke = {0};
-    bool isDrawing = false;
+    //bool isDrawing = false;
+    doc.isDrawing = false;
     bool isPanning = false;
     bool showSettings = false;
     int draggedPage = -1;
@@ -58,6 +60,9 @@ int main(void){
 
     float currentBrushThickness = 3.0f;
 
+    Settings settings = {0};
+    settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
+    BindState listeningForBind = BIND_NONE;
     //Vector2 canvasOffset = { (screenWidth - A4_WIDTH) / 2.0f, 20.0f};
     Camera2D camera = {0};
     camera.target = (Vector2){0.0f, 0.0f};
@@ -72,16 +77,27 @@ int main(void){
 
         bool guiClicked = showSettings;
 
-        InputHandler(&doc);
+        SettingsBinds(&listeningForBind, &settings);
+        //InputHandler(&doc);
+        if(!showSettings && listeningForBind == BIND_NONE){
+            if(IsKeyPressed(settings.binds.keyPen) && settings.binds.keyPen != 0) activeBrush = BRUSH_PEN;
+            if(IsKeyPressed(settings.binds.keyHigh) && settings.binds.keyHigh != 0) activeBrush = BRUSH_HIGHLIGHTER;
+            if(IsKeyPressed(settings.binds.keyLine) && settings.binds.keyLine != 0) activeBrush = BRUSH_LINE;
+            if(IsKeyPressed(settings.binds.keyRect) && settings.binds.keyRect != 0) activeBrush = BRUSH_RECTANGLE;
+            if(IsKeyPressed(settings.binds.keyCircle) && settings.binds.keyCircle != 0) activeBrush = BRUSH_CIRCLE;
 
-        if(IsKeyPressed(KEY_ONE)){
-            currentBrushColor = BLACK;
-            currentBrushThickness = 3.0f;
+            if(IsKeyPressed(settings.binds.keySave) && settings.binds.keySave != 0){
+                const char *path = ShowSaveFileDialog();
+                if(path) SaveDocumentBinary(path, &doc);
+            }
+            if(IsKeyPressed(settings.binds.keyLoad) && settings.binds.keyLoad != 0){
+                const char *path = ShowOpenFileDialog();
+                if(path) LoadDocumentBinary(path, &doc);
+            }
+            if(IsKeyPressed(settings.binds.keyUndo) && settings.binds.keyUndo != 0) UndoLastStrokes(&doc.pages[doc.activePage]);
+            if(IsKeyPressed(settings.binds.keyDel) && settings.binds.keyDel != 0) DeleteActivePage(&doc);
         }
-        if(IsKeyPressed(KEY_TWO)){
-            currentBrushColor = (Color){255,255,0,100};;
-            currentBrushThickness = 20.0f;
-        }
+
         // ui bar
         if(mousePos.y < UI_HEIGHT && !showSettings){
             guiClicked = true;
@@ -119,7 +135,7 @@ int main(void){
                     draggedPage = hoveredPage;
                     dragOffsetY = mouseWorldPos.y - (hoveredPage * (A4_HEIGHT + PAGE_GAP));
                 } else{
-                    isDrawing = true;
+                    doc.isDrawing = true;
 
                     currentStroke = (Stroke){0};
                     currentStroke.type = activeBrush;
@@ -145,7 +161,7 @@ int main(void){
 
         if(draggedPage != -1){
 
-        } else if(isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+        } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
             if(activeBrush == BRUSH_PEN || activeBrush == BRUSH_HIGHLIGHTER || activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
@@ -178,8 +194,8 @@ int main(void){
                MovePageToIndex(&doc, draggedPage, dropIndex);
                draggedPage = -1;
             }
-            if(isDrawing){
-                isDrawing = false;
+            if(doc.isDrawing){
+                doc.isDrawing = false;
                 FinishStroke(&currentStroke, &doc);
             }
             isPanning = false;
@@ -217,7 +233,7 @@ int main(void){
             for(int i = 0; i < page->strokeCount; i++) 
                 RenderStroke(&page->strokes[i], pageYOffset);
             // real-time stroke
-            if(isDrawing && p == doc.activePage)
+            if(doc.isDrawing && p == doc.activePage)
                 RenderStroke(&currentStroke, pageYOffset);
         }
         // dragged page preview
@@ -267,7 +283,6 @@ int main(void){
         }
         if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc.pages[doc.activePage]);
         if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(&doc);
-
         if(GUIButton((Rectangle){centerX + 250, 10, 90, 40}, "Settings", showSettings)) showSettings = !showSettings;
         for(int i = 0; i<5;i++){
             int swatchX = GetScreenWidth() - 250 + (i * 45);
@@ -283,23 +298,7 @@ int main(void){
         }
         // settings page
         if(showSettings){
-            DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
-
-            int boxW = 400;
-            int boxH = 300;
-            int boxX = (GetScreenWidth() - boxW)/2;
-            int boxY = (GetScreenHeight() - boxH)/2;
-
-            DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.1f, 10, (Color){40, 40, 40, 255});
-            DrawRectangleRoundedLinesEx((Rectangle){boxX, boxY, boxW, boxH}, 0.1f, 10, 2.0f, DARKGRAY);
-            DrawText("Document Background", boxX + 60, boxY + 30, 25, WHITE);
-
-            int btnX = boxX + 110;
-            if(GUIButton((Rectangle){btnX, boxY+80, 180, 40}, "Blank", doc.pattern == BG_BLANK)) doc.pattern = BG_BLANK;
-            if(GUIButton((Rectangle){btnX, boxY+130, 180, 40}, "Lined", doc.pattern == BG_LINED)) doc.pattern = BG_LINED;
-            if(GUIButton((Rectangle){btnX, boxY+180, 180, 40}, "Grid", doc.pattern == BG_GRID)) doc.pattern = BG_GRID;
-            if(GUIButton((Rectangle){btnX, boxY+230, 180, 40}, "Dots", doc.pattern == BG_DOTS)) doc.pattern =BG_DOTS;
-
+            SettingsPage(&doc, &settings, &listeningForBind);
 
         }
         EndDrawing();

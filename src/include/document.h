@@ -30,5 +30,7 @@ typedef struct {
     int pageCapacity;
     int activePage;
     BgPattern pattern;
+
+    bool isDrawing;
 } Document;
 #endif
