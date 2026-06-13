@@ -15,27 +15,7 @@
 #define PAGE_GAP 60
 #define UI_HEIGHT 60
 
-void InputHandler(Document *doc){
-    if(IsKeyPressed(KEY_N))
-        AddPageToDocument(doc);
-    if(IsKeyPressed(KEY_RIGHT) && doc->activePage < doc->pageCount - 1)
-        doc->activePage ++;
-    if(IsKeyPressed(KEY_LEFT) && doc->activePage  > 0)
-        doc->activePage --;
-    if(IsKeyPressed(KEY_S))
-        SaveDocumentBinary(SAVE_FILE, doc);
-    if(IsKeyPressed(KEY_L))
-        LoadDocumentBinary(SAVE_FILE, doc);
-    if(IsKeyPressed(KEY_U))
-        UndoLastStrokes(&(doc->pages[doc->activePage]));
-    if(IsKeyPressed(KEY_DELETE))
-        DeleteActivePage(doc);
-    if(IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_UP))
-        MoveActivePageUp(doc);
-    if(IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_DOWN))
-        MoveActivePageDown(doc);
-    
-}
+
 int main(void){
     const int screenWidth = 1400;
     const int screenHeight = 900;
@@ -46,24 +26,29 @@ int main(void){
     Document doc = {0};
     AddPageToDocument(&doc);
     doc.pattern = BG_BLANK;
-    BrushType activeBrush = BRUSH_PEN;
+    doc.activeBrush = BRUSH_PEN;
     Stroke currentStroke = {0};
-    //bool isDrawing = false;
+
     doc.isDrawing = false;
     bool isPanning = false;
-    bool showSettings = false;
     int draggedPage = -1;
     float dragOffsetY = 0.0f;
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
-    int selectedColorIndex = 0;
+
     Color currentBrushColor = BLACK;
 
-    float currentBrushThickness = 3.0f;
+
 
     Settings settings = {0};
+    settings.showSettings = false;
+    settings.currentBrushThickness = 3.0f;
+    settings.selectedColorIndex = 0;
+    settings.pallete = (Color*)malloc(5 * sizeof(Color));
+    Color p[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
+    memcpy(settings.pallete, p, 5 * sizeof(Color));
     settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
     BindState listeningForBind = BIND_NONE;
-    //Vector2 canvasOffset = { (screenWidth - A4_WIDTH) / 2.0f, 20.0f};
+  
     Camera2D camera = {0};
     camera.target = (Vector2){0.0f, 0.0f};
     camera.offset = (Vector2){ (GetScreenWidth() - A4_WIDTH) / 2.0f, 50.0f};
@@ -75,37 +60,20 @@ int main(void){
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
-        bool guiClicked = showSettings;
+        bool guiClicked = settings.showSettings;
 
         SettingsBinds(&listeningForBind, &settings);
         //InputHandler(&doc);
-        if(!showSettings && listeningForBind == BIND_NONE){
-            if(IsKeyPressed(settings.binds.keyPen) && settings.binds.keyPen != 0) activeBrush = BRUSH_PEN;
-            if(IsKeyPressed(settings.binds.keyHigh) && settings.binds.keyHigh != 0) activeBrush = BRUSH_HIGHLIGHTER;
-            if(IsKeyPressed(settings.binds.keyLine) && settings.binds.keyLine != 0) activeBrush = BRUSH_LINE;
-            if(IsKeyPressed(settings.binds.keyRect) && settings.binds.keyRect != 0) activeBrush = BRUSH_RECTANGLE;
-            if(IsKeyPressed(settings.binds.keyCircle) && settings.binds.keyCircle != 0) activeBrush = BRUSH_CIRCLE;
-
-            if(IsKeyPressed(settings.binds.keySave) && settings.binds.keySave != 0){
-                const char *path = ShowSaveFileDialog();
-                if(path) SaveDocumentBinary(path, &doc);
-            }
-            if(IsKeyPressed(settings.binds.keyLoad) && settings.binds.keyLoad != 0){
-                const char *path = ShowOpenFileDialog();
-                if(path) LoadDocumentBinary(path, &doc);
-            }
-            if(IsKeyPressed(settings.binds.keyUndo) && settings.binds.keyUndo != 0) UndoLastStrokes(&doc.pages[doc.activePage]);
-            if(IsKeyPressed(settings.binds.keyDel) && settings.binds.keyDel != 0) DeleteActivePage(&doc);
-        }
+        InputHandler(&doc, &settings, &listeningForBind);
 
         // ui bar
-        if(mousePos.y < UI_HEIGHT && !showSettings){
+        if(mousePos.y < UI_HEIGHT && !settings.showSettings){
             guiClicked = true;
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 for(int i = 0; i < 5; i++){
                     int swatchX = GetScreenWidth() - 250 + (i * 45);
                     if(GetMouseX() >= swatchX && GetMouseX() <= swatchX + 30){
-                        selectedColorIndex = i;
+                        settings.selectedColorIndex = i;
                     }
                 }
             }
@@ -138,9 +106,9 @@ int main(void){
                     doc.isDrawing = true;
 
                     currentStroke = (Stroke){0};
-                    currentStroke.type = activeBrush;
-                    currentStroke.color = pallete[selectedColorIndex];
-                    currentStroke.thickness = currentBrushThickness;
+                    currentStroke.type = doc.activeBrush;
+                    currentStroke.color = pallete[settings.selectedColorIndex];
+                    currentStroke.thickness = settings.currentBrushThickness;
                     AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
                 }
             } else{
@@ -162,7 +130,7 @@ int main(void){
         if(draggedPage != -1){
 
         } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            if(activeBrush == BRUSH_PEN || activeBrush == BRUSH_HIGHLIGHTER || activeBrush == BRUSH_PENCIL){
+            if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
                     float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
@@ -257,47 +225,10 @@ int main(void){
         }
 
         EndMode2D();
-        DrawRectangle(0,0, GetScreenWidth(), 50, (Color){50,50,50,255});
-        DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount),10, 15, 20, WHITE);
-
-        int toolX = 20;
-        if(GUIButton((Rectangle){toolX, 10,60, 40}, "Pen", activeBrush == BRUSH_PEN)) activeBrush = BRUSH_PEN;
-        if(GUIButton((Rectangle){toolX +=60, 10, 75, 40}, "Pencil", activeBrush == BRUSH_PENCIL)) activeBrush = BRUSH_PENCIL;
-        if(GUIButton((Rectangle){toolX += 85, 10, 100, 40}, "Highlighter", activeBrush == BRUSH_HIGHLIGHTER)) activeBrush = BRUSH_HIGHLIGHTER;
-        if(GUIButton((Rectangle){toolX += 110, 10, 60, 40}, "Line", activeBrush == BRUSH_LINE)) activeBrush = BRUSH_LINE;
-        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Rect", activeBrush == BRUSH_RECTANGLE)) activeBrush = BRUSH_RECTANGLE;
-        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Circle", activeBrush == BRUSH_CIRCLE)) activeBrush = BRUSH_CIRCLE;
-
+        GUIHeaderBar(&doc, &settings);
         
-        int centerX = GetScreenWidth() / 2;
-        DrawText(TextFormat("Page %d/%d", doc.activePage + 1, doc.pageCount), centerX - 250, 20, 20, WHITE);
-        GUISlider((Rectangle){centerX - 200, 10, 120, 16}, &currentBrushThickness, 1.0f, 99.0f);
-        if(GUIButton((Rectangle){centerX - 130, 10, 70, 40}, "New", false)) AddPageToDocument(&doc);
-        if(GUIButton((Rectangle){centerX - 50, 10, 70, 40}, "Save", false)) {
-            const char *savePath = ShowSaveFileDialog();
-            if(savePath) SaveDocumentBinary(savePath, &doc);
-        }
-        if(GUIButton((Rectangle){centerX + 30, 10, 70, 40}, "Load", false)) {
-            const char *openPath = ShowOpenFileDialog();
-            if(openPath) LoadDocumentBinary(openPath, &doc);
-        }
-        if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc.pages[doc.activePage]);
-        if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(&doc);
-        if(GUIButton((Rectangle){centerX + 250, 10, 90, 40}, "Settings", showSettings)) showSettings = !showSettings;
-        for(int i = 0; i<5;i++){
-            int swatchX = GetScreenWidth() - 250 + (i * 45);
-            Vector2 center = {swatchX + 20, UI_HEIGHT / 2.0f};
-
-
-            if(i == selectedColorIndex){
-                DrawCircleV(center, 20, WHITE);
-
-            }
-            DrawCircleV(center, 16, pallete[i]);
-            DrawCircleLines(center.x, center.y, 16, (Color){0,0,0,100});
-        }
         // settings page
-        if(showSettings){
+        if(settings.showSettings){
             SettingsPage(&doc, &settings, &listeningForBind);
 
         }

@@ -43,6 +43,26 @@ void SettingsBinds(BindState *listeningForBind, Settings *settings){
         }
     }
 }
+void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind){
+    if(!settings->showSettings && *listeningForBind == BIND_NONE){
+        if(IsKeyPressed(settings->binds.keyPen) && settings->binds.keyPen != 0) doc->activeBrush = BRUSH_PEN;
+        if(IsKeyPressed(settings->binds.keyHigh) && settings->binds.keyHigh != 0) doc->activeBrush = BRUSH_HIGHLIGHTER;
+        if(IsKeyPressed(settings->binds.keyLine) && settings->binds.keyLine != 0) doc->activeBrush = BRUSH_LINE;
+        if(IsKeyPressed(settings->binds.keyRect) && settings->binds.keyRect != 0) doc->activeBrush = BRUSH_RECTANGLE;
+        if(IsKeyPressed(settings->binds.keyCircle) && settings->binds.keyCircle != 0) doc->activeBrush = BRUSH_CIRCLE;
+
+        if(IsKeyPressed(settings->binds.keySave) && settings->binds.keySave != 0){
+            const char *path = ShowSaveFileDialog();
+            if(path) SaveDocumentBinary(path, doc);
+        }
+        if(IsKeyPressed(settings->binds.keyLoad) && settings->binds.keyLoad != 0){
+            const char *path = ShowOpenFileDialog();
+            if(path) LoadDocumentBinary(path, doc);
+        }
+        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage]);
+        if(IsKeyPressed(settings->binds.keyDel) && settings->binds.keyDel != 0) DeleteActivePage(doc);
+    }
+}
 void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind){
     DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
 

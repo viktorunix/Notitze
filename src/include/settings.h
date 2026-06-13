@@ -3,6 +3,8 @@
 #include "raylib.h"
 #include "document.h"
 #include "gui.h"
+#include "file_saving.h"
+#include "doc_management.h"
 typedef enum{
     BIND_NONE = 0,
     BIND_PEN,
@@ -23,8 +25,15 @@ typedef struct {
 
 typedef struct {
     Keybinds binds;
+
+    bool showSettings;
+    int selectedColorIndex;
+    float currentBrushThickness;
+    
+    Color *pallete;
 } Settings;
 const char* KeyToString(int key);
 void SettingsBinds(BindState *listeningForBind, Settings *settings);
+void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind);
 void SettingsPage(Document *doc, Settings *settings, BindState *listeningForBind);
 #endif

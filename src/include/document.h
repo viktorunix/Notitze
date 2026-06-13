@@ -32,5 +32,6 @@ typedef struct {
     BgPattern pattern;
 
     bool isDrawing;
+    BrushType activeBrush;
 } Document;
 #endif
