@@ -116,3 +116,160 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
 
     #undef DRAW_BIND_ROW
 }
+void SaveSettings(Settings settings){
+    FILE *file = fopen("settings.stz", "wb");
+    if(!file) return;
+
+    char magic[6] = "NTZSTZ";
+    fwrite(magic, sizeof(char), 6, file);
+    fwrite(&settings.binds, sizeof(Keybinds), 1, file);
+    fwrite(&settings.showSettings, sizeof(bool), 1, file);
+    fwrite(&settings.selectedColorIndex, sizeof(int), 1, file);
+    fwrite(&settings.currentBrushThickness, sizeof(float), 1, file);
+    fwrite(&settings.pallete,  sizeof(Color),5, file);
+
+    fclose(file);
+}
+bool LoadSettings(Settings *settings){
+    FILE *file = fopen("settings.stz", "rb");
+    if(!file) return false;
+
+    char magic[6];
+    fread(magic, sizeof(char), 6, file);
+    if(strstr(magic, "NTZSTZ" )== NULL){
+        fclose(file);
+        return false;
+    }
+    
+    fread(&settings->binds, sizeof(Keybinds), 1, file);
+    //printf("daaa\n");
+    fread(&settings->showSettings, sizeof(bool), 1, file);
+    fread(&settings->selectedColorIndex, sizeof(int), 1, file);
+    fread(&settings->currentBrushThickness, sizeof(float),1, file);
+    printf("daaa\n");
+    fread(&settings->pallete, sizeof(Color), 5, file);
+    printf("daaa\n");
+
+    printf("%i\n", settings->pallete[2]);
+    fclose(file);
+    return true;
+    
+}
+void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
+    int barWidth = 1000;
+    int barHeight = 140;
+    int barY = 20;
+    int barX = (GetScreenWidth() - barWidth) / 2;
+    Rectangle uiBounds = { (float)barX, (float)barY, (float)barWidth, (float)barHeight};
+
+    DrawRectangleRounded((Rectangle){barX + 5, barY + 5, barWidth, barHeight}, 0.2f, 16, (Color){0,0,0,100});
+
+    DrawRectangleRounded(uiBounds, 0.2f, 16, (Color){35,35,40, 245});
+    DrawRectangleRoundedLinesEx(uiBounds, 0.2f, 16, 2.0f, (Color){60,60,65,255});
+
+    int btnH = 46;
+    int gap = 15;
+
+    //row 1
+    int r1Width = 765;
+    int curX = barX + (barWidth - r1Width) / 2;
+    int curY = barY + 15;
+
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Pen", doc->activeBrush == BRUSH_PEN)) doc->activeBrush = BRUSH_PEN;
+    curX += 70 + gap;
+    if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Pencil", doc->activeBrush == BRUSH_PENCIL)) doc->activeBrush = BRUSH_PENCIL;
+    curX += 90 + gap;
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "High", doc->activeBrush == BRUSH_HIGHLIGHTER)) doc->activeBrush = BRUSH_HIGHLIGHTER;
+    curX += 70 + gap;
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Line", doc->activeBrush == BRUSH_LINE)) doc->activeBrush = BRUSH_LINE;
+    curX += 70 + gap;
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Rect", doc->activeBrush == BRUSH_RECTANGLE)) doc->activeBrush = BRUSH_RECTANGLE;
+    curX += 70 + gap;
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Circl", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
+    curX += 70 + 50;
+
+    for(int i = 0; i < 5; i++){
+        Vector2 center = {curX + 20, curY + btnH / 2.0f};
+        if(!settings->showSettings * IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            if(CheckCollisionPointCircle(mousePos, center, 20.0f)) settings->selectedColorIndex = i;
+
+        }
+        if(i == settings->selectedColorIndex) DrawCircleV(center, 24, WHITE);
+        DrawCircleV(center, 20, settings->pallete[i]);
+        DrawCircleLines(center.x, center.y, 20, (Color){0,0,0,100});
+        curX+=45;
+    }
+        
+    
+    //row 2
+    int r2Width = 955;
+    curX = barX + (barWidth - r2Width) / 2;
+    curY = barY + 15 + btnH + 15;
+
+    DrawText("Brush Size", curX + 30, curY , 20, LIGHTGRAY);
+    curX += 50 + gap;
+    GUISlider((Rectangle){curX - 30, curY + 30, 120, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
+
+    
+    curX +=110 + gap;
+
+    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);
+    curX += 70 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Save", false)){
+        const char *path = ShowSaveFileDialog();
+        if (path) SaveDocumentBinary(path, doc);
+    }
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Load", false)){
+        const char *path = ShowOpenFileDialog();
+        if(path) LoadDocumentBinary(path, doc);
+    }
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage]);
+    curX +=80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Delete", false)) DeleteActivePage(doc);
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Settings", settings->showSettings)) settings->showSettings = !settings->showSettings;
+
+}
+void GUIHeaderBar(Document *doc, Settings *settings){
+    DrawRectangle(0,0, GetScreenWidth(), 50, (Color){50,50,50,255});
+        DrawText(TextFormat("Page %d/%d", doc->activePage + 1, doc->pageCount),10, 15, 20, WHITE);
+
+        int toolX = 20;
+        if(GUIButton((Rectangle){toolX, 10,60, 40}, "Pen", doc->activeBrush == BRUSH_PEN)) doc->activeBrush = BRUSH_PEN;
+        if(GUIButton((Rectangle){toolX +=60, 10, 75, 40}, "Pencil", doc->activeBrush == BRUSH_PENCIL)) doc->activeBrush = BRUSH_PENCIL;
+        if(GUIButton((Rectangle){toolX += 85, 10, 100, 40}, "Highlighter", doc->activeBrush == BRUSH_HIGHLIGHTER)) doc->activeBrush = BRUSH_HIGHLIGHTER;
+        if(GUIButton((Rectangle){toolX += 110, 10, 60, 40}, "Line", doc->activeBrush == BRUSH_LINE)) doc->activeBrush = BRUSH_LINE;
+        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Rect", doc->activeBrush == BRUSH_RECTANGLE)) doc->activeBrush = BRUSH_RECTANGLE;
+        if(GUIButton((Rectangle){toolX += 70, 10, 70, 40}, "Circle", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
+
+        
+        int centerX = GetScreenWidth() / 2;
+        DrawText(TextFormat("Page %d/%d", doc->activePage + 1, doc->pageCount), centerX - 250, 20, 20, WHITE);
+        GUISlider((Rectangle){centerX - 200, 10, 120, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
+        if(GUIButton((Rectangle){centerX - 130, 10, 70, 40}, "New", false)) AddPageToDocument(doc);
+        if(GUIButton((Rectangle){centerX - 50, 10, 70, 40}, "Save", false)) {
+            const char *savePath = ShowSaveFileDialog();
+            if(savePath) SaveDocumentBinary(savePath, doc);
+        }
+        if(GUIButton((Rectangle){centerX + 30, 10, 70, 40}, "Load", false)) {
+            const char *openPath = ShowOpenFileDialog();
+            if(openPath) LoadDocumentBinary(openPath, doc);
+        }
+        if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage]);
+        if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(doc);
+        if(GUIButton((Rectangle){centerX + 250, 10, 90, 40}, "Settings", settings->showSettings)) settings->showSettings = !settings->showSettings;
+        for(int i = 0; i<5;i++){
+            int swatchX = GetScreenWidth() - 250 + (i * 45);
+            Vector2 center = {swatchX + 20, UI_HEIGHT / 2.0f};
+
+
+            if(i == settings->selectedColorIndex){
+                DrawCircleV(center, 20, WHITE);
+
+            }
+            DrawCircleV(center, 16, settings->pallete[i]);
+            DrawCircleLines(center.x, center.y, 16, (Color){0,0,0,100});
+        }
+}

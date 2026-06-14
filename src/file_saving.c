@@ -103,3 +103,4 @@ ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";    ofn
 #endif
     return NULL; 
 }
+

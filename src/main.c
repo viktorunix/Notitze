@@ -13,7 +13,6 @@
 
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
-#define UI_HEIGHT 60
 
 
 int main(void){
@@ -57,6 +56,7 @@ int main(void){
     camera.zoom = 1.0f;
     SetTargetFPS(120);
 
+    //LoadSettings(&settings);
     while(!WindowShouldClose()){
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
@@ -70,7 +70,7 @@ int main(void){
         // ui bar
         if(mousePos.y < UI_HEIGHT && !settings.showSettings){
             guiClicked = true;
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            /*if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 for(int i = 0; i < 5; i++){
                     int swatchX = GetScreenWidth() - 250 + (i * 45);
                     if(GetMouseX() >= swatchX && GetMouseX() <= swatchX + 30){
@@ -78,6 +78,7 @@ int main(void){
                     }
                 }
             }
+                */
         }
         
         // camera zoom
@@ -226,8 +227,8 @@ int main(void){
         }
 
         EndMode2D();
-        GUIHeaderBar(&doc, &settings);
-        
+        //GUIHeaderBar(&doc, &settings);
+        GUIHeaderDock(&doc, &settings, mousePos);
         // settings page
         if(settings.showSettings){
             SettingsPage(&doc, &settings, &listeningForBind);
@@ -236,6 +237,7 @@ int main(void){
         EndDrawing();
     }
 
+    SaveSettings(settings);
     FreeDocument(&doc);
     CloseWindow();
 

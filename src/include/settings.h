@@ -29,11 +29,16 @@ typedef struct {
     bool showSettings;
     int selectedColorIndex;
     float currentBrushThickness;
-    
+
     Color *pallete;
 } Settings;
 const char* KeyToString(int key);
 void SettingsBinds(BindState *listeningForBind, Settings *settings);
 void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind);
 void SettingsPage(Document *doc, Settings *settings, BindState *listeningForBind);
+void SaveSettings(Settings settings);
+bool LoadSettings(Settings *settings);
+void GUIHeaderBar(Document *doc, Settings *settings);
+void GUIHeaderDock(Document *doc, Settings *settings,Vector2 mousePos);
+
 #endif

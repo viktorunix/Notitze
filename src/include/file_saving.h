@@ -30,4 +30,5 @@ void SaveDocumentBinary(const char *filename, Document *doc);
 bool LoadDocumentBinary(const char *filename, Document *doc);
 const char *ShowSaveFileDialog();
 const char *ShowOpenFileDialog();
+
 #endif
