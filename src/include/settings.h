@@ -38,7 +38,6 @@ void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind
 void SettingsPage(Document *doc, Settings *settings, BindState *listeningForBind);
 void SaveSettings(Settings settings);
 bool LoadSettings(Settings *settings);
-void GUIHeaderBar(Document *doc, Settings *settings);
 void GUIHeaderDock(Document *doc, Settings *settings,Vector2 mousePos);
 
 #endif
