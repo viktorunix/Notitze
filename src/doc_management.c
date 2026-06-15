@@ -17,7 +17,7 @@ void MoveActivePageDown(Document *doc){
         doc->activePage++;
     }
 }
-
+/*
 void UndoLastStrokes(Page *activePage){
     if(activePage->strokeCount > 0){
         activePage->strokeCount--;
@@ -28,11 +28,21 @@ void UndoLastStrokes(Page *activePage){
         activePage->strokes[activePage->strokeCount].capacity = 0;
     }
 }
-
+    */
+void UndoLastStrokes(Layer *layer){
+    if(layer->strokeCount > 0 ){
+        layer->strokeCount--;
+        free(layer->strokes[layer->strokeCount].points);
+        layer->strokes[layer->strokeCount].points = NULL;
+        layer->strokes[layer->strokeCount].pointCount = 0;
+        layer->strokes[layer->strokeCount].capacity = 0;
+    }
+}
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
-        AddStrokeToPage(&doc->pages[doc->activePage], *currentStroke);
+        //AddStrokeToPage(&doc->pages[doc->activePage], *currentStroke);
+        AddStrokeToLayer(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], *currentStroke);
     } else{
         free(currentStroke->points);
     }

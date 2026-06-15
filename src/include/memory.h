@@ -4,8 +4,13 @@
 #include "raylib.h"
 #include "document.h"
 void AddPointToStroke(Stroke *stroke, Vector2 point);
-void AddStrokeToPage(Page *page, Stroke stroke);
+//void AddStrokeToPage(Page *page, Stroke stroke);
+void AddStrokeToLayer(Layer *layer, Stroke stroke);
+void AddLayerToPage(Page *page);
 void AddPageToDocument(Document *doc);
+void FreeLayer(Layer *layer);
+void FreePage(Page *page);
 void FreeDocument(Document *doc);
 void DeleteActivePage(Document *doc);
+void DeleteActiveLayer(Page *page);
 #endif

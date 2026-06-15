@@ -89,7 +89,6 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
         }
     }
     else if (stroke->pointCount >= 2){
-        printf("DAAA %d\n", stroke->pointCount);
         Vector2 p1 = {stroke->points[0].x, stroke->points[0].y + pageYOffset};
         Vector2 p2 = {stroke->points[1].x, stroke->points[1].y + pageYOffset};
 

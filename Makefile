@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -I src/include -xc -std=c11
+CFLAGS = -g  -I src/include -xc -std=c11
 LDFLAGS = -L src/lib
 LIBS = -l:raylib.dll -lopengl32 -lgdi32 -lwinmm -lcomdlg32
 

@@ -18,13 +18,14 @@
 int main(void){
     const int screenWidth = 1400;
     const int screenHeight = 900;
-
+   
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
     Document doc = {0};
     AddPageToDocument(&doc);
+    doc.enableLayers = false;
     doc.pattern = BG_BLANK;
     doc.activeBrush = BRUSH_PEN;
     Stroke currentStroke = {0};
@@ -38,7 +39,6 @@ int main(void){
     Color currentBrushColor = BLACK;
 
 
-
     Settings settings = {0};
     settings.showSettings = false;
     settings.currentBrushThickness = 3.0f;
@@ -48,7 +48,7 @@ int main(void){
     memcpy(settings.pallete, p, 5 * sizeof(Color));
     settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
     BindState listeningForBind = BIND_NONE;
-  
+    printf("DAAA\n");
     Camera2D camera = {0};
     camera.target = (Vector2){0.0f, 0.0f};
     camera.offset = (Vector2){ (GetScreenWidth() - A4_WIDTH) / 2.0f, 50.0f};
@@ -56,13 +56,27 @@ int main(void){
     camera.zoom = 1.0f;
     SetTargetFPS(120);
 
+
+    int barWidth = 1000;
+    int barHeight = 140;
+    int barY = 20;
+    printf("DAAA\n");
     //LoadSettings(&settings);
     while(!WindowShouldClose()){
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
+        int barX = (GetScreenWidth() - barWidth / 2);
+        Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
         bool guiClicked = settings.showSettings;
-
+        bool layerHovered = false;
+        if(doc.enableLayers && !settings.showSettings){
+            int pH = 60 + (doc.pages[doc.activePage].layerCount * 40) + (doc.pages[doc.activePage].layerCount > 1 ? 50 : 0);
+            Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
+            layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
+        }
+        bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
+        guiClicked = settings.showSettings || uiHovered;
         SettingsBinds(&listeningForBind, &settings);
         //InputHandler(&doc);
         InputHandler(&doc, &settings, &listeningForBind);
@@ -98,6 +112,10 @@ int main(void){
 
 
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked){
+            if(doc.activeBrush == BRUSH_HIGHLIGHTER)
+                pallete[settings.selectedColorIndex].a = 150;
+            else
+                pallete[settings.selectedColorIndex].a = 255;
             if(hoveredPage >= 0 && hoveredPage < doc.pageCount && mouseWorldPos.x >= 0 && mouseWorldPos.x <= A4_WIDTH){
                 doc.activePage = hoveredPage;
 
@@ -105,13 +123,16 @@ int main(void){
                     draggedPage = hoveredPage;
                     dragOffsetY = mouseWorldPos.y - (hoveredPage * (A4_HEIGHT + PAGE_GAP));
                 } else{
-                    doc.isDrawing = true;
+                    Layer *activeLayer = &doc.pages[hoveredPage].layers[doc.pages[hoveredPage].activeLayer];
+                    if(activeLayer->isVisible){
+                        doc.isDrawing = true;
 
-                    currentStroke = (Stroke){0};
-                    currentStroke.type = doc.activeBrush;
-                    currentStroke.color = pallete[settings.selectedColorIndex];
-                    currentStroke.thickness = settings.currentBrushThickness;
-                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                        currentStroke = (Stroke){0};
+                        currentStroke.type = doc.activeBrush;
+                        currentStroke.color = pallete[settings.selectedColorIndex];
+                        currentStroke.thickness = settings.currentBrushThickness;
+                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                    }
                 }
             } else{
                 isPanning = true;
@@ -200,14 +221,23 @@ int main(void){
 
             //strokes
             Page *page = &doc.pages[p];
-            for(int i = 0; i < page->strokeCount; i++) 
-                RenderStroke(&page->strokes[i], pageYOffset);
+            //for(int i = 0; i < page->strokeCount; i++) 
+            //    RenderStroke(&page->strokes[i], pageYOffset);
+            for(int l = 0; l < page->layerCount; l++){
+                Layer *layer = &page->layers[l];
+                if(!layer->isVisible) continue;
+                for(int i = 0; i < layer->strokeCount; i++)
+                    RenderStroke(&layer->strokes[i], pageYOffset);
+
+                if(doc.isDrawing && p == doc.activePage && l == page->activeLayer)
+                    RenderStroke(&currentStroke, pageYOffset);
+            }
             // real-time stroke
-            if(doc.isDrawing && p == doc.activePage)
-                RenderStroke(&currentStroke, pageYOffset);
+            //if(doc.isDrawing && p == doc.activePage)
+            //    RenderStroke(&currentStroke, pageYOffset);
         }
         // dragged page preview
-        if(draggedPage != -1){
+        /*if(draggedPage != -1){
             float floatY = mouseWorldPos.y - dragOffsetY;
             DrawRectangle(15, floatY + 15, A4_WIDTH, A4_HEIGHT, (Color){0,0,0,100});
             DrawRectangle(0, floatY, A4_WIDTH, A4_HEIGHT, RAYWHITE);
@@ -225,10 +255,56 @@ int main(void){
                 }
             }
         }
+        */
+        if(draggedPage != -1){
+            float floatY = mouseWorldPos.y - dragOffsetY;
+            DrawRectangle(15, floatY + 15, A4_WIDTH, A4_HEIGHT, (Color){0,0,0,100});
+            DrawRectangle(0, floatY, A4_WIDTH, A4_HEIGHT, RAYWHITE);
+            DrawPageBackground(doc.pattern, floatY);
+            DrawRectangle(0, floatY, A4_WIDTH, 40, SKYBLUE);
+
+            Page *page = &doc.pages[draggedPage];
+            for(int l = 0; l < page->layerCount; l++){
+                Layer *layer = &page->layers[l];
+                if(!layer->isVisible) continue;
+                for(int i = 0; i < layer->strokeCount; i++)
+                    RenderStroke(&layer->strokes[i], floatY);
+            }
+        }
 
         EndMode2D();
         //GUIHeaderBar(&doc, &settings);
         GUIHeaderDock(&doc, &settings, mousePos);
+        // layer panel
+        if(doc.enableLayers && !settings.showSettings){
+            Page *aPage = &doc.pages[doc.activePage];
+            int pW = 220;
+            int pH = 60 + (aPage->layerCount * 45) + (aPage->layerCount > 1 ? 50 : 0);
+            int pX = GetScreenWidth() - pW - 20;
+            int pY = barY + barHeight + 20;
+
+            DrawRectangleRounded((Rectangle){pX + 5, pY + 5, pW, pH}, 0.1f, 10, (Color){0,0,0,100});
+            DrawRectangleRounded((Rectangle){pX, pY, pW, pH}, 0.1f, 10, (Color){35,35,40, 245});
+            DrawRectangleRoundedLinesEx((Rectangle){pX, pY, pW, pH}, 0.1f, 10, 2.0f, (Color){60,60,65,255});
+
+            DrawText("Layers", pX + 20, pY + 18, 20, WHITE);
+            if(GUIButton((Rectangle){pX + pW - 50, pY + 10, 35,35}, "+",  false))AddLayerToPage(aPage);
+
+            int lY = pY + 60;
+
+            for(int l = aPage->layerCount - 1; l >=0; l--){
+                Layer *layer = &aPage->layers[l];
+                if(GUIButton((Rectangle){pX+10, lY, 40, 35}, layer->isVisible ? "O" : "-", layer->isVisible))
+                    layer->isVisible = !layer->isVisible;
+                if(GUIButton((Rectangle){pX+55, lY, pW- 65, 35}, TextFormat("Layer %d", l + 1), aPage->activeLayer == l))
+                    aPage->activeLayer = l;
+                lY+= 45;
+            }
+            if(aPage->layerCount > 1){
+                if(GUIButton((Rectangle){pX + 10, lY + 5, pW - 20, 35}, "Delete Layer", false))
+                    DeleteActiveLayer(aPage);
+            }
+        }
         // settings page
         if(settings.showSettings){
             SettingsPage(&doc, &settings, &listeningForBind);
