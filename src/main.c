@@ -60,7 +60,6 @@ int main(void){
     int barWidth = 1000;
     int barHeight = 140;
     int barY = 20;
-    printf("DAAA\n");
     //LoadSettings(&settings);
     while(!WindowShouldClose()){
         Vector2 mousePos = GetMousePosition();
@@ -78,21 +77,11 @@ int main(void){
         bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
         guiClicked = settings.showSettings || uiHovered;
         SettingsBinds(&listeningForBind, &settings);
-        //InputHandler(&doc);
         InputHandler(&doc, &settings, &listeningForBind);
 
         // ui bar
         if(mousePos.y < UI_HEIGHT && !settings.showSettings){
             guiClicked = true;
-            /*if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                for(int i = 0; i < 5; i++){
-                    int swatchX = GetScreenWidth() - 250 + (i * 45);
-                    if(GetMouseX() >= swatchX && GetMouseX() <= swatchX + 30){
-                        settings.selectedColorIndex = i;
-                    }
-                }
-            }
-                */
         }
         
         // camera zoom
@@ -203,35 +192,8 @@ int main(void){
 
             if(p == draggedPage) continue;
             float pageYOffset = p * (A4_HEIGHT + PAGE_GAP);
-
-            //paper
-            DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
-            DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-            DrawPageBackground(doc.pattern, pageYOffset);
-
-            //paper drag bar
-            DrawRectangle(0, pageYOffset, A4_WIDTH, 40, (Color){200,200,200,255});
-            DrawText("|||", A4_WIDTH/2 - MeasureText("|||", 20)/2, pageYOffset + 10, 20, DARKGRAY);
-
-            //active page highlight
-            Color borderColor = (p == doc.activePage) ? SKYBLUE: LIGHTGRAY;
-            int borderThickness = (p == doc.activePage) ? 4 : 1;
-            DrawRectangleLinesEx((Rectangle){0, pageYOffset, A4_WIDTH, A4_HEIGHT}, borderThickness, borderColor);
-
-
-            //strokes
-            Page *page = &doc.pages[p];
-            //for(int i = 0; i < page->strokeCount; i++) 
-            //    RenderStroke(&page->strokes[i], pageYOffset);
-            for(int l = 0; l < page->layerCount; l++){
-                Layer *layer = &page->layers[l];
-                if(!layer->isVisible) continue;
-                for(int i = 0; i < layer->strokeCount; i++)
-                    RenderStroke(&layer->strokes[i], pageYOffset);
-
-                if(doc.isDrawing && p == doc.activePage && l == page->activeLayer)
-                    RenderStroke(&currentStroke, pageYOffset);
-            }
+            GUIPage(&doc, &currentStroke, p, pageYOffset);
+            
         }
         // dragged page preview
         
@@ -255,33 +217,7 @@ int main(void){
         GUIHeaderDock(&doc, &settings, mousePos);
         // layer panel
         if(doc.enableLayers && !settings.showSettings){
-            Page *aPage = &doc.pages[doc.activePage];
-            int pW = 220;
-            int pH = 60 + (aPage->layerCount * 45) + (aPage->layerCount > 1 ? 50 : 0);
-            int pX = GetScreenWidth() - pW - 20;
-            int pY = barY + barHeight + 20;
-
-            DrawRectangleRounded((Rectangle){pX + 5, pY + 5, pW, pH}, 0.1f, 10, (Color){0,0,0,100});
-            DrawRectangleRounded((Rectangle){pX, pY, pW, pH}, 0.1f, 10, (Color){35,35,40, 245});
-            DrawRectangleRoundedLinesEx((Rectangle){pX, pY, pW, pH}, 0.1f, 10, 2.0f, (Color){60,60,65,255});
-
-            DrawText("Layers", pX + 20, pY + 18, 20, WHITE);
-            if(GUIButton((Rectangle){pX + pW - 50, pY + 10, 35,35}, "+",  false))AddLayerToPage(aPage);
-
-            int lY = pY + 60;
-
-            for(int l = aPage->layerCount - 1; l >=0; l--){
-                Layer *layer = &aPage->layers[l];
-                if(GUIButton((Rectangle){pX+10, lY, 40, 35}, layer->isVisible ? "O" : "-", layer->isVisible))
-                    layer->isVisible = !layer->isVisible;
-                if(GUIButton((Rectangle){pX+55, lY, pW- 65, 35}, TextFormat("Layer %d", l + 1), aPage->activeLayer == l))
-                    aPage->activeLayer = l;
-                lY+= 45;
-            }
-            if(aPage->layerCount > 1){
-                if(GUIButton((Rectangle){pX + 10, lY + 5, pW - 20, 35}, "Delete Layer", false))
-                    DeleteActiveLayer(aPage);
-            }
+            GUILayerPanel(&doc);
         }
         // settings page
         if(settings.showSettings){

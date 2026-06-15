@@ -137,3 +137,78 @@ void DrawPageBackground(BgPattern pattern, float pageYOffset){
     }
 }
 
+void GUILayerPanel(Document *doc){
+    int barY = 20;
+    int barHeight = 140;
+    Page *aPage = &doc->pages[doc->activePage];
+    int pW = 300;
+    int pH = 60 + (aPage->layerCount * 125) + (aPage->layerCount > 1 ? 50 : 0);
+    int pX = GetScreenWidth() - pW - 20;
+    int pY = barY + barHeight + 20;
+
+    DrawRectangleRounded((Rectangle){pX + 5, pY + 5, pW, pH}, 0.1f, 10, (Color){0,0,0,100});
+    DrawRectangleRounded((Rectangle){pX, pY, pW, pH}, 0.1f, 10, (Color){35,35,40, 245});
+    DrawRectangleRoundedLinesEx((Rectangle){pX, pY, pW, pH}, 0.1f, 10, 2.0f, (Color){60,60,65,255});
+
+    DrawText("Layers", pX + 20, pY + 18, 20, WHITE);
+    if(GUIButton((Rectangle){pX + pW -50, pY + 10, 35, 35}, "+", false)) AddLayerToPage(aPage);
+
+    int lY = pY + 60;
+    for(int l = aPage->layerCount - 1; l >=0; l--){
+        Layer *layer = &aPage->layers[l];
+        if(GUIButton((Rectangle){pX+10, lY + 45,35, 35}, layer->isVisible ? "O" : "-", layer->isVisible))
+            layer->isVisible= !layer->isVisible;
+
+        Rectangle thumbRec = {pX + 60, lY + 6, 80, 113};
+        DrawRectangleRec(thumbRec, RAYWHITE);
+
+        BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
+
+        Camera2D thumbCam = {0};
+        thumbCam.target = (Vector2){0,0};
+        thumbCam.offset = (Vector2){thumbRec.x, thumbRec.y};
+        thumbCam.zoom = thumbRec.width / (float)A4_WIDTH;
+
+        BeginMode2D(thumbCam);
+        for(int i = 0; i < layer->strokeCount;i++)
+            RenderStroke(&layer->strokes[i], 0);
+
+        EndMode2D();
+        EndScissorMode();
+        DrawRectangleLinesEx(thumbRec, 1.0f, LIGHTGRAY);
+
+        if(GUIButton((Rectangle){pX+155,lY+ 42, pW - 170,40}, TextFormat("Layer %d", l+1), aPage->activeLayer == l))
+            aPage->activeLayer = l;
+        lY+=125;
+    }
+    if(aPage->layerCount > 1){
+        if(GUIButton((Rectangle){pX + 10, lY + 5, pW - 20, 35}, "Delete Layer", false))
+            DeleteActiveLayer(aPage);
+    }
+}
+
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
+    //paper
+    DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
+    DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
+    DrawPageBackground(doc->pattern, pageYOffset);
+    //paper drag bar
+    DrawRectangle(0, pageYOffset, A4_WIDTH, 40, (Color){200,200,200,255});
+    DrawText("|||", A4_WIDTH/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
+    // active page highlight
+    Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
+    int borderThickness = (p == doc->activePage) ? 4 : 1;
+    DrawRectangleLinesEx((Rectangle){0, pageYOffset, A4_WIDTH, A4_HEIGHT}, borderThickness, borderColor);
+    //strokes
+    Page *page = &doc->pages[p];
+
+    for(int l = 0; l < page->layerCount; l++){
+        Layer *layer = &page->layers[l];
+        if(!layer->isVisible) continue;
+        for(int i = 0; i < layer->strokeCount; i++)
+            RenderStroke(&layer->strokes[i], pageYOffset);
+        if(doc->isDrawing && p == doc->activePage && l == page->activeLayer)
+            RenderStroke(currentStroke, pageYOffset);
+    }
+
+}
