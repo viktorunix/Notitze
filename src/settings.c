@@ -59,7 +59,7 @@ void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind
             const char *path = ShowOpenFileDialog();
             if(path) LoadDocumentBinary(path, doc);
         }
-        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage]);
+        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer]);
         if(IsKeyPressed(settings->binds.keyDel) && settings->binds.keyDel != 0) DeleteActivePage(doc);
     }
 }
@@ -112,8 +112,10 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     DRAW_BIND_ROW("Undo", settings->binds.keyUndo,BIND_UNDO, col3X, currentY);
     currentY +=50;
     DRAW_BIND_ROW("Delete Page", settings->binds.keyDel, BIND_DEL, col3X, currentY);
+    currentY +=50;
 
-
+    if(GUIButton((Rectangle){col3X, currentY, 180, 40}, doc->enableLayers ? "Layers: ON" : "Layers: OFF", doc->enableLayers))
+        doc->enableLayers = !doc->enableLayers;
     #undef DRAW_BIND_ROW
 }
 void SaveSettings(Settings settings){
@@ -185,8 +187,8 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 70 + gap;
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Rect", doc->activeBrush == BRUSH_RECTANGLE)) doc->activeBrush = BRUSH_RECTANGLE;
     curX += 70 + gap;
-    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Circl", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
-    curX += 70 + 50;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Circle", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
+    curX += 80 + 50;
 
     for(int i = 0; i < 5; i++){
         Vector2 center = {curX + 20, curY + btnH / 2.0f};
@@ -225,7 +227,7 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
         if(path) LoadDocumentBinary(path, doc);
     }
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage]);
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer]);
     curX +=80 + gap;
     if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Delete", false)) DeleteActivePage(doc);
     curX += 80 + gap;
@@ -257,7 +259,7 @@ void GUIHeaderBar(Document *doc, Settings *settings){
             const char *openPath = ShowOpenFileDialog();
             if(openPath) LoadDocumentBinary(openPath, doc);
         }
-        if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage]);
+        if(GUIButton((Rectangle){centerX + 110, 10, 70, 40}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer]);
         if(GUIButton((Rectangle){centerX + 190, 10, 80, 40}, "Delete", false)) DeleteActivePage(doc);
         if(GUIButton((Rectangle){centerX + 250, 10, 90, 40}, "Settings", settings->showSettings)) settings->showSettings = !settings->showSettings;
         for(int i = 0; i<5;i++){

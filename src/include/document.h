@@ -23,6 +23,14 @@ typedef struct {
     Stroke *strokes;
     int strokeCount;
     int capacity;
+    bool isVisible;
+} Layer;
+
+typedef struct {
+    Layer *layers;
+    int layerCount;
+    int layerCapacity;
+    int activeLayer;
 } Page;
 typedef struct {
     Page *pages;
@@ -33,5 +41,7 @@ typedef struct {
 
     bool isDrawing;
     BrushType activeBrush;
+
+    bool enableLayers;
 } Document;
 #endif
