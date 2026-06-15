@@ -141,8 +141,8 @@ void GUILayerPanel(Document *doc){
     int barY = 20;
     int barHeight = 140;
     Page *aPage = &doc->pages[doc->activePage];
-    int pW = 220;
-    int pH = 60 + (aPage->layerCount * 45) + (aPage->layerCount > 1 ? 50 : 0);
+    int pW = 300;
+    int pH = 60 + (aPage->layerCount * 125) + (aPage->layerCount > 1 ? 50 : 0);
     int pX = GetScreenWidth() - pW - 20;
     int pY = barY + barHeight + 20;
 
@@ -156,11 +156,30 @@ void GUILayerPanel(Document *doc){
     int lY = pY + 60;
     for(int l = aPage->layerCount - 1; l >=0; l--){
         Layer *layer = &aPage->layers[l];
-        if(GUIButton((Rectangle){pX+10, lY,40, 35}, layer->isVisible ? "O" : "-", layer->isVisible))
+        if(GUIButton((Rectangle){pX+10, lY + 45,35, 35}, layer->isVisible ? "O" : "-", layer->isVisible))
             layer->isVisible= !layer->isVisible;
-        if(GUIButton((Rectangle){pX+55,lY, pW - 65,35}, TextFormat("Layer %d", l+1), aPage->activeLayer == l))
+
+        Rectangle thumbRec = {pX + 60, lY + 6, 80, 113};
+        DrawRectangleRec(thumbRec, RAYWHITE);
+
+        BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
+
+        Camera2D thumbCam = {0};
+        thumbCam.target = (Vector2){0,0};
+        thumbCam.offset = (Vector2){thumbRec.x, thumbRec.y};
+        thumbCam.zoom = thumbRec.width / (float)A4_WIDTH;
+
+        BeginMode2D(thumbCam);
+        for(int i = 0; i < layer->strokeCount;i++)
+            RenderStroke(&layer->strokes[i], 0);
+
+        EndMode2D();
+        EndScissorMode();
+        DrawRectangleLinesEx(thumbRec, 1.0f, LIGHTGRAY);
+
+        if(GUIButton((Rectangle){pX+155,lY+ 42, pW - 170,40}, TextFormat("Layer %d", l+1), aPage->activeLayer == l))
             aPage->activeLayer = l;
-        lY+=45;
+        lY+=125;
     }
     if(aPage->layerCount > 1){
         if(GUIButton((Rectangle){pX + 10, lY + 5, pW - 20, 35}, "Delete Layer", false))
