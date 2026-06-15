@@ -7,16 +7,7 @@ void AddPointToStroke(Stroke *stroke, Vector2 point){
     }
     stroke->points[stroke->pointCount++] = point;
 }
-/*
-void AddStrokeToPage(Page *page, Stroke stroke){
-    if(page->strokeCount >= page->capacity){
-        page->capacity = page->capacity == 0 ? 32 : page->capacity * 2;
-        page->strokes = (Stroke *)realloc(page->strokes, page->capacity * sizeof(Stroke));
 
-    }
-    page->strokes[page->strokeCount++] = stroke;
-}
-*/
 void AddStrokeToLayer(Layer *layer, Stroke stroke){
     if(layer->strokeCount >= layer->capacity){
         layer->capacity = layer->capacity == 0 ? 32 : layer->capacity * 2;
@@ -46,16 +37,6 @@ void AddPageToDocument(Document *doc){
     doc->activePage = doc->pageCount;
     doc->pageCount++;
 }
-/*
-void AddPageToDocument(Document *doc){
-    if(doc->pageCount >= doc->pageCapacity){
-        doc->pageCapacity = doc->pageCapacity == 0 ? 4 : doc->pageCapacity * 2;
-        doc->pages = (Page*)realloc(doc->pages, doc->pageCapacity * sizeof(Page));
-    }
-    doc->pages[doc->pageCount] = (Page){0};
-    doc->activePage = doc->pageCount;
-    doc->pageCount++;
-}*/
 
 void FreeLayer(Layer *layer){
     for(int s = 0; s < layer->strokeCount;s++)
@@ -90,18 +71,6 @@ void DeleteActiveLayer(Page *page){
     if(page->activeLayer >= page->layerCount)
         page->activeLayer = page->layerCount - 1;
 }
-/*
-void FreeDocument(Document *doc){
-    for(int p = 0; p < doc->pageCount;p++){
-        for(int s = 0; s < doc->pages[p].strokeCount; s++){
-            free(doc->pages[p].strokes[s].points);
-        }
-        free(doc->pages[p].strokes);
-    }
-    free(doc->pages);
-    *doc = (Document){0};
-}
-    */
 
 void FreeDocument(Document *doc){
     for(int p = 0; p < doc->pageCount; p++)
@@ -109,21 +78,3 @@ void FreeDocument(Document *doc){
     free(doc->pages);
     *doc = (Document){0};
 }
-/*
-void DeleteActivePage(Document *doc){
-    if (doc->pageCount <= 1) return;
-    int p = doc->activePage;
-    for(int s = 0; s < doc->pages[p].strokeCount; s++){
-        free(doc->pages[p].strokes[s].points);
-    }
-    free(doc->pages[p].strokes);
-    for (int i = p; i < doc->pageCount - 1; i++){
-        doc->pages[i] = doc->pages[i + 1];
-    }
-    doc->pageCount--;
-
-    if(doc->activePage >= doc->pageCount){
-        doc->activePage = doc->pageCount - 1;
-    }
-}
-*/

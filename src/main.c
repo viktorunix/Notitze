@@ -232,30 +232,9 @@ int main(void){
                 if(doc.isDrawing && p == doc.activePage && l == page->activeLayer)
                     RenderStroke(&currentStroke, pageYOffset);
             }
-            // real-time stroke
-            //if(doc.isDrawing && p == doc.activePage)
-            //    RenderStroke(&currentStroke, pageYOffset);
         }
         // dragged page preview
-        /*if(draggedPage != -1){
-            float floatY = mouseWorldPos.y - dragOffsetY;
-            DrawRectangle(15, floatY + 15, A4_WIDTH, A4_HEIGHT, (Color){0,0,0,100});
-            DrawRectangle(0, floatY, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-            DrawRectangle(0, floatY, A4_WIDTH, 40, SKYBLUE);
-            DrawRectangleLinesEx((Rectangle){0, floatY, A4_WIDTH, A4_HEIGHT}, 4, SKYBLUE);
-
-            Page *page = &doc.pages[draggedPage];
-            for (int i = 0; i < page->strokeCount; i++){
-                Stroke *s = &page->strokes[i];
-                for(int j = 0; j < s->pointCount - 1; j++){
-                    Vector2 p1 = {s->points[j].x, s->points[j].y + floatY};
-                    Vector2 p2 = {s->points[j+1].x, s->points[j+1].y + floatY};
-                    DrawLineEx(p1, p2, s->thickness, s->color);
-                    DrawCircleV(p1, s->thickness / 2.0f, s->color);
-                }
-            }
-        }
-        */
+        
         if(draggedPage != -1){
             float floatY = mouseWorldPos.y - dragOffsetY;
             DrawRectangle(15, floatY + 15, A4_WIDTH, A4_HEIGHT, (Color){0,0,0,100});
@@ -273,7 +252,6 @@ int main(void){
         }
 
         EndMode2D();
-        //GUIHeaderBar(&doc, &settings);
         GUIHeaderDock(&doc, &settings, mousePos);
         // layer panel
         if(doc.enableLayers && !settings.showSettings){
