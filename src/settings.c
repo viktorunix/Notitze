@@ -69,19 +69,21 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     int boxW = 800;
     int boxH = 400;
     int boxX = (GetScreenWidth() - boxW)/2;
-    int boxY = (GetScreenHeight() - boxH)/2;
+    int boxY =  (GetScreenHeight() - boxH)/2;
 
+    
     DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, (Color){40, 40, 40, 255});
     DrawRectangleRoundedLinesEx((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, 2.0f, DARKGRAY);
     
-    DrawText("Document Background", boxX + 50, boxY + 30, 25, WHITE);
+    if(GUIButton((Rectangle){boxX + 5, boxY + 5, 30,30}, "X", settings->showSettings)) settings->showSettings = !settings->showSettings;
+    DrawText("Background", boxX + 50, boxY + 30, 20, WHITE);
     int col1X = boxX + 30;
     if(GUIButton((Rectangle){col1X, boxY+80, 180, 40}, "Blank", doc->pattern == BG_BLANK)) doc->pattern = BG_BLANK;
     if(GUIButton((Rectangle){col1X, boxY+130, 180, 40}, "Lined", doc->pattern == BG_LINED)) doc->pattern = BG_LINED;
     if(GUIButton((Rectangle){col1X, boxY+180, 180, 40}, "Grid", doc->pattern == BG_GRID)) doc->pattern = BG_GRID;
     if(GUIButton((Rectangle){col1X, boxY+230, 180, 40}, "Dots", doc->pattern == BG_DOTS)) doc->pattern =BG_DOTS;
 
-    DrawText("KEY", boxX + 320, boxY + 30, 25, WHITE);
+    DrawText("KEY", boxX + 320, boxY + 30, 20, WHITE);
     int col2X = boxX + 250;
     int currentY = boxY + 80;
 
@@ -101,7 +103,7 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     currentY +=50;
     DRAW_BIND_ROW("Circle Tool", settings->binds.keyCircle, BIND_CIRCLE, col2X, currentY);
     
-    DrawText("System", boxX + 590, boxY + 30, 25, WHITE);
+    DrawText("System", boxX + 590, boxY + 30, 20, WHITE);
     int col3X = boxX + 520;
     currentY = boxY + 80;
 
