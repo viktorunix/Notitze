@@ -43,5 +43,9 @@ typedef struct {
     BrushType activeBrush;
 
     bool enableLayers;
+
+    float pageWidth;
+    float pageHeight;
+    int ppi;
 } Document;
 #endif
