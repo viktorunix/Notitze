@@ -48,6 +48,129 @@ void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue){
     DrawCircleV(knobCenter, bounds.height * 0.8f, WHITE);
     DrawCircleLines(knobCenter.x, knobCenter.y, bounds.height * 0.8f, GRAY);
 }
+Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
+    float t2 = t * t;
+    float t3 = t2 * t;
+    return (Vector2){
+        0.5f * ((2.0f * p1.x) + (-p0.x + p2.x) * t + (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 + (-p0.x + 3.0f * p1.x - 3.0f * p2.x + p3.x) * t3),
+        0.5f * ((2.0f * p1.y) + (-p0.y + p2.y) * t + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 + (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3)
+    };
+}
+void newRenderStroke(Stroke *stroke, float pageYOffset){
+    if(stroke->pointCount == 0) return;
+    if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
+        if(stroke->pointCount < 3){
+            for(int j = 0; j < stroke->pointCount - 1; j++){
+                Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
+                Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
+                DrawLineEx(p1, p2, stroke->thickness, stroke->color);
+                DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
+            }
+        } else {
+            //catmull-rom spline
+            for(int j = 0; j < stroke->pointCount - 1; j++){
+                Vector2 p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
+                Vector2 p1 = stroke->points[j];
+                Vector2 p2 = stroke->points[j + 1];
+                Vector2 p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
+
+                p0.y += pageYOffset;
+                p1.y += pageYOffset;
+                p2.y += pageYOffset;
+                p3.y += pageYOffset;
+
+                int segments = (int)(Vector2Distance(p1,p2)/2.0f);
+                if(segments < 2) segments = 2;
+
+                Vector2 lastP = p1;
+                DrawCircleV(p1,stroke->thickness / 2.0f, stroke->color);
+                for(int i = 1; i <=segments; i++){
+                    float t = (float)i / (float)segments;
+                    Vector2 nextP = CalculateSplinePoint(p0,p1,p2,p3, t);
+                    DrawLineEx(lastP, nextP, stroke->thickness, stroke->color);
+                    DrawCircleV(nextP, stroke->thickness / 2.0f, stroke->color);
+                    lastP = nextP;
+                }
+            }
+        }
+    }
+    else if (stroke->type == BRUSH_PENCIL){
+        Color graphite = stroke->color;
+        graphite.a = 100;
+        if(stroke->pointCount < 3){
+            for(int j = 0; j< stroke->pointCount - 1; j++){
+                Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
+                Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
+
+                SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
+
+                float dist = Vector2Distance(p1, p2);
+                Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
+
+                for(float d = 0; d < dist; d+= 1.0f){
+                    Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
+
+                    for(int k = 0; k <2 * stroke->thickness; k++){
+                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+
+                        Vector2 speck = {basePos.x + randX, basePos.y + randY};
+                        DrawCircleV(speck, 0.5f, graphite);
+                    }
+                }
+            }
+        }
+        else{
+            for(int j = 0; j< stroke->pointCount - 1; j++){
+                Vector2 p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
+                Vector2 p1 = stroke->points[j];
+                Vector2 p2 = stroke->points[j + 1];
+                Vector2 p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
+
+                p0.y += pageYOffset;
+                p1.y += pageYOffset;
+                p2.y += pageYOffset;
+                p3.y += pageYOffset;
+
+                SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
+                float segDist = Vector2Distance(p1, p2);
+                for (float d = 0; d <segDist; d+=1.0f){
+                    float t = d / segDist;
+                    Vector2 basePos = CalculateSplinePoint(p0,p1,p2,p3,t);
+                    int dustCount=(int)(stroke->thickness);
+                    if(dustCount <3) dustCount = 3;
+                    for (int k = 0; k < dustCount; k++) {
+                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                        DrawCircleV((Vector2){basePos.x + randX, basePos.y + randY}, 0.5f, graphite);
+                    }
+                }
+                
+            }
+
+        }
+    } else if (stroke->pointCount >= 2){
+        Vector2 p1 = {stroke->points[0].x, stroke->points[0].y + pageYOffset};
+        Vector2 p2 = {stroke->points[1].x, stroke->points[1].y + pageYOffset};
+
+        if(stroke->type == BRUSH_LINE){
+            DrawLineEx(p1, p2, stroke->thickness, stroke->color);
+            DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
+            DrawCircleV(p2, stroke->thickness / 2.0f, stroke->color);
+        }
+        else if(stroke->type == BRUSH_RECTANGLE){
+            float rx = fminf(p1.x, p2.x);
+            float ry = fminf(p1.y, p2.y);
+            float rw = fabsf(p1.x - p2.x);
+            float rh = fabsf(p1.y - p2.y);
+            DrawRectangleLinesEx((Rectangle){rx, ry, rw, rh}, stroke->thickness, stroke->color);
+        }
+        else if(stroke->type == BRUSH_CIRCLE){
+            float radius = Vector2Distance(p1, p2);
+            DrawRing(p1, radius - (stroke->thickness / 2.0f),radius + (stroke->thickness / 2.0f), 0,360, 64,stroke->color);
+        }
+    }
+}
 void RenderStroke(Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){

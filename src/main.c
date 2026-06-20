@@ -157,8 +157,12 @@ int main(void){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
                     float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
-                    if(distSq > 9.0f && hoveredPage == doc.activePage){
-                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                    if(distSq > 4.0f && hoveredPage == doc.activePage){
+                        Vector2 smoothPoint = {
+                            lastPoint.x + (mouseWorldPos.x - lastPoint.x) * 0.75f,
+                            lastPoint.y + (mouseWorldPos.y - lastPoint.y) * 0.75f
+                        };
+                        AddPointToStroke(&currentStroke, smoothPoint);
                     }
                 }
                 if(!isMouseInsideCanvas){
@@ -220,7 +224,7 @@ int main(void){
                 Layer *layer = &page->layers[l];
                 if(!layer->isVisible) continue;
                 for(int i = 0; i < layer->strokeCount; i++)
-                    RenderStroke(&layer->strokes[i], floatY);
+                    newRenderStroke(&layer->strokes[i], floatY);
             }
         }
 
