@@ -4,8 +4,14 @@ void SaveDocumentBinary(const char *filename, Document *doc){
     FILE *file = fopen(filename, "wb");
     if(!file) return;
 
-    char magic[4] = "NTZ1";
+    char magic[4] = "NTZ2";
     fwrite(magic, sizeof(char), 4, file);
+
+    fwrite(&doc->pageWidth, sizeof(float), 1, file);
+    fwrite(&doc->pageHeight, sizeof(float), 1,file);
+    fwrite(&doc->ppi, sizeof(int), 1, file);
+
+
     fwrite(&doc->pageCount, sizeof(int),1,file);
     fwrite(&doc->pattern, sizeof(int), 1, file);
     fwrite(&doc->enableLayers, sizeof(bool),1,file);
@@ -39,12 +45,22 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     if(!file) return false;
     char magic[4];
     fread(magic, sizeof(char), 4, file);
-    if(strstr(magic, "NTZ1") == NULL) {
+    if(strstr(magic, "NTZ") == NULL) {
         fclose(file);
         return false;
     }
-
+    int version = magic[3] - '0';
     FreeDocument(doc);
+
+    if(version >= 2){
+        fread(&doc->pageWidth, sizeof(float),1,file);
+        fread(&doc->pageHeight, sizeof(float), 1, file);
+        fread(&doc->ppi, sizeof(int), 1, file);
+    } else{
+        doc->pageWidth = 842.0f;
+        doc->pageHeight = 1191.0f;
+        doc->ppi = 96;
+    }
     int totalPages = 0;
     fread(&totalPages, sizeof(int), 1, file);
     fread(&doc->pattern, sizeof(int),1,file);

@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "brush.h"
+#include "paper.h"
 
 typedef enum {
     BG_BLANK = 0,
@@ -43,5 +44,10 @@ typedef struct {
     BrushType activeBrush;
 
     bool enableLayers;
+
+    PaperFormat pageFormat;
+    float pageWidth;
+    float pageHeight;
+    int ppi;
 } Document;
 #endif

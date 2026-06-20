@@ -111,27 +111,27 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
     }
 }
 
-void DrawPageBackground(BgPattern pattern, float pageYOffset){
+void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     Color lineColor = (Color){200, 215, 230, 255};
     Color marginColor = (Color){255, 150, 150, 180};
 
     if (pattern == BG_LINED){
-        DrawLine(80, pageYOffset, 80, pageYOffset + A4_HEIGHT, marginColor);
-        for(int y = 80; y < A4_HEIGHT; y+=30){
-            DrawLine(0, pageYOffset + y, A4_WIDTH, pageYOffset + y, lineColor);
+        DrawLine(80, pageYOffset, 80, pageYOffset + doc->pageHeight, marginColor);
+        for(int y = 80; y < doc->pageHeight; y+=30){
+            DrawLine(0, pageYOffset + y, doc->pageWidth, pageYOffset + y, lineColor);
         }
     }
     else if(pattern == BG_GRID){
-        for(int x = 30; x < A4_WIDTH; x+=30)
-            DrawLine(x, pageYOffset, x, pageYOffset + A4_HEIGHT, lineColor);
-        for(int y = 30; y < A4_HEIGHT; y+=30)
-            DrawLine(0, pageYOffset + y, A4_WIDTH, pageYOffset + y, lineColor);
+        for(int x = 30; x < doc->pageWidth; x+=30)
+            DrawLine(x, pageYOffset, x, pageYOffset + doc->pageHeight, lineColor);
+        for(int y = 30; y < doc->pageHeight; y+=30)
+            DrawLine(0, pageYOffset + y, doc->pageWidth, pageYOffset + y, lineColor);
 
 
     }
     else if (pattern == BG_DOTS){
-        for(int x = 30; x < A4_WIDTH; x+=30){
-            for(int y = 30; y < A4_HEIGHT; y+=30)
+        for(int x = 30; x < doc->pageWidth; x+=30){
+            for(int y = 30; y < doc->pageHeight; y+=30)
                 DrawCircle(x, pageYOffset + y, 2.0f, lineColor);
         }
     }
@@ -167,7 +167,7 @@ void GUILayerPanel(Document *doc){
         Camera2D thumbCam = {0};
         thumbCam.target = (Vector2){0,0};
         thumbCam.offset = (Vector2){thumbRec.x, thumbRec.y};
-        thumbCam.zoom = thumbRec.width / (float)A4_WIDTH;
+        thumbCam.zoom = thumbRec.width / (float)doc->pageWidth;
 
         BeginMode2D(thumbCam);
         for(int i = 0; i < layer->strokeCount;i++)
@@ -189,16 +189,16 @@ void GUILayerPanel(Document *doc){
 
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     //paper
-    DrawRectangle(5, pageYOffset + 5, A4_WIDTH, A4_HEIGHT, BLACK);
-    DrawRectangle(0, pageYOffset, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-    DrawPageBackground(doc->pattern, pageYOffset);
+    DrawRectangle(8, pageYOffset + 8, doc->pageWidth, doc->pageHeight, BLACK);
+    DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
+    DrawPageBackground(doc, doc->pattern, pageYOffset);
     //paper drag bar
-    DrawRectangle(0, pageYOffset, A4_WIDTH, 40, (Color){200,200,200,255});
-    DrawText("|||", A4_WIDTH/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
+    DrawRectangle(0, pageYOffset, doc->pageWidth, 40, (Color){200,200,200,255});
+    DrawText("|||", doc->pageWidth/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
     // active page highlight
     Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
     int borderThickness = (p == doc->activePage) ? 4 : 1;
-    DrawRectangleLinesEx((Rectangle){0, pageYOffset, A4_WIDTH, A4_HEIGHT}, borderThickness, borderColor);
+    DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
     //strokes
     Page *page = &doc->pages[p];
 
