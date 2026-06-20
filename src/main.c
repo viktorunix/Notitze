@@ -10,7 +10,8 @@
 #include "include/doc_management.h"
 #include "include/gui.h"
 #include "include/settings.h"
-
+#include "include/panels.h"
+//#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
@@ -28,6 +29,10 @@ int main(void){
     doc.enableLayers = false;
     doc.pattern = BG_BLANK;
     doc.activeBrush = BRUSH_PEN;
+    doc.pageFormat = FORMAT_A4;
+    doc.ppi = START_PPI;
+    doc.pageWidth = CUSTOM_W;
+    doc.pageHeight = CUSTOM_H;
     Stroke currentStroke = {0};
 
     doc.isDrawing = false;
@@ -51,7 +56,7 @@ int main(void){
     printf("DAAA\n");
     Camera2D camera = {0};
     camera.target = (Vector2){0.0f, 0.0f};
-    camera.offset = (Vector2){ (GetScreenWidth() - A4_WIDTH) / 2.0f, 50.0f};
+    camera.offset = (Vector2){ (GetScreenWidth() - doc.pageWidth) / 2.0f, 50.0f};
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
     SetTargetFPS(120);
@@ -61,7 +66,13 @@ int main(void){
     int barHeight = 140;
     int barY = 20;
     //LoadSettings(&settings);
+
+    bool isStartup = true;
     while(!WindowShouldClose()){
+        if(isStartup){
+            isStartup = startUpWindow(&doc,&camera);
+            continue;
+        }
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
@@ -95,9 +106,9 @@ int main(void){
         }
 
         //drag, drom and drawing
-        int hoveredPage = (int)(mouseWorldPos.y / (A4_HEIGHT + PAGE_GAP));
+        int hoveredPage = (int)(mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
         if(mouseWorldPos.y < 0) hoveredPage = -1;
-        float localMouseY = mouseWorldPos.y - (hoveredPage * (A4_HEIGHT + PAGE_GAP));
+        float localMouseY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
 
 
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked){
@@ -105,12 +116,12 @@ int main(void){
                 pallete[settings.selectedColorIndex].a = 150;
             else
                 pallete[settings.selectedColorIndex].a = 255;
-            if(hoveredPage >= 0 && hoveredPage < doc.pageCount && mouseWorldPos.x >= 0 && mouseWorldPos.x <= A4_WIDTH){
+            if(hoveredPage >= 0 && hoveredPage < doc.pageCount && mouseWorldPos.x >= 0 && mouseWorldPos.x <= doc.pageWidth){
                 doc.activePage = hoveredPage;
 
                 if(localMouseY <= 40){
                     draggedPage = hoveredPage;
-                    dragOffsetY = mouseWorldPos.y - (hoveredPage * (A4_HEIGHT + PAGE_GAP));
+                    dragOffsetY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
                 } else{
                     Layer *activeLayer = &doc.pages[hoveredPage].layers[doc.pages[hoveredPage].activeLayer];
                     if(activeLayer->isVisible){
@@ -136,8 +147,8 @@ int main(void){
         Vector2 localMousePos = {mouseWorldPos.x, localMouseY};
 
         bool isMouseInsideCanvas = (hoveredPage >= 0 && hoveredPage < doc.pageCount &&
-                                    localMousePos.x >= 0 && localMousePos.x <= A4_WIDTH &&
-                                    localMouseY >= 0 && localMouseY <= A4_HEIGHT);
+                                    localMousePos.x >= 0 && localMousePos.x <= doc.pageWidth &&
+                                    localMouseY >= 0 && localMouseY <= doc.pageHeight);
 
         if(draggedPage != -1){
 
@@ -170,7 +181,7 @@ int main(void){
         
         if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)){
             if(draggedPage != -1){
-               int dropIndex = (int)(mouseWorldPos.y / (A4_HEIGHT + PAGE_GAP));
+               int dropIndex = (int)(mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
                MovePageToIndex(&doc, draggedPage, dropIndex);
                draggedPage = -1;
             }
@@ -191,7 +202,7 @@ int main(void){
         for(int p = 0; p< doc.pageCount; p++){
 
             if(p == draggedPage) continue;
-            float pageYOffset = p * (A4_HEIGHT + PAGE_GAP);
+            float pageYOffset = p * (doc.pageHeight + PAGE_GAP);
             GUIPage(&doc, &currentStroke, p, pageYOffset);
             
         }
@@ -199,10 +210,10 @@ int main(void){
         
         if(draggedPage != -1){
             float floatY = mouseWorldPos.y - dragOffsetY;
-            DrawRectangle(15, floatY + 15, A4_WIDTH, A4_HEIGHT, (Color){0,0,0,100});
-            DrawRectangle(0, floatY, A4_WIDTH, A4_HEIGHT, RAYWHITE);
-            DrawPageBackground(doc.pattern, floatY);
-            DrawRectangle(0, floatY, A4_WIDTH, 40, SKYBLUE);
+            DrawRectangle(15, floatY + 15, doc.pageWidth, doc.pageHeight, (Color){0,0,0,100});
+            DrawRectangle(0, floatY, doc.pageWidth, doc.pageHeight, RAYWHITE);
+            DrawPageBackground(&doc, doc.pattern, floatY);
+            DrawRectangle(0, floatY, doc.pageWidth, 40, SKYBLUE);
 
             Page *page = &doc.pages[draggedPage];
             for(int l = 0; l < page->layerCount; l++){

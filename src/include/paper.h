@@ -7,4 +7,7 @@ typedef enum{
     FORMAT_LETTER,
     FORMAT_CUSTOM
 } PaperFormat;
+#define START_PPI 96
+#define CUSTOM_W 1920
+#define CUSTOM_H 1080
 #endif
