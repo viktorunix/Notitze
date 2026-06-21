@@ -11,8 +11,14 @@ typedef enum {
     BG_GRID,
     BG_DOTS
 } BgPattern;
+
 typedef struct {
-    Vector2 *points;
+    Vector2 pos;
+    float pressure;
+
+} StrokePoint;
+typedef struct {
+    StrokePoint *points;
     int pointCount;
     int capacity;
     Color color;
