@@ -218,17 +218,23 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled, Textu
                 float pressure = pressureEnabled ? stroke->points[j].pressure : 1.0f;
                 float currentThick = stroke->thickness * pressure;
                 currentThick = fmaxf(currentThick, 0.5f);
+                float radius = currentThick / 2.0f;
+
+                int dustCount = (int)(radius * radius * 2.5f);
+                if(dustCount < 3) dustCount = 3;
+
                 for(float d = 0; d < dist; d+= 1.0f){
                     Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
-                    int dustCount = (int)currentThick;
-                    if(dustCount < 3) dustCount = 3;
-                    for(int k = 0; k <dustCount; k++){
-                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
-                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
 
-                        Vector2 speck = {basePos.x + randX, basePos.y + randY};
+                    for(int k = 0; k < dustCount; k++){
+                        float angle = (float)GetRandomValue(0,360) * DEG2RAD;
+
+                        float randVal = (float)GetRandomValue(0,100)/ 100.0f;
+                        float r = randVal * randVal * radius;
+                        Vector2 speck = {basePos.x + cosf(angle) * r, basePos.y+ sinf(angle) * r};
                         DrawCircleV(speck, 0.5f, graphite);
                     }
+                   
                 }
             }
         }
@@ -254,12 +260,17 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled, Textu
                     float finalPressure = pressureEnabled ? currentPres : 1.0f;
                     float currentThick = stroke->thickness * finalPressure;
                     currentThick=fmaxf(currentThick, 0.5f);
-                    int dustCount=(int)(currentPres);
+                    float radius = currentThick / 2.0f;
+                    int dustCount=(int)(radius * radius * 2.5f);
                     if(dustCount <3) dustCount = 3;
                     for (int k = 0; k < dustCount; k++) {
-                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
-                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
-                        DrawCircleV((Vector2){basePos.x + randX, basePos.y + randY}, 0.5f, graphite);
+                        float angle = (float)GetRandomValue(0,360) * DEG2RAD;
+                        float randVal = (float)GetRandomValue(0, 100) / 100.0f;
+                        float r = randVal * randVal * radius;
+
+                        Vector2 speck = {basePos.x + cosf(angle) * r, basePos.y + sinf(angle) * r};
+                        DrawCircleV(speck, 0.5f, graphite);
+                                                
                     }
                 }
                 
