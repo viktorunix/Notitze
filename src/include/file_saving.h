@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "memory.h"
-
+#include "gui.h"
 // windows API
 #ifdef _WIN32
     #define Rectangle WinRectangle

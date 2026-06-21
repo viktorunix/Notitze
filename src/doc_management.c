@@ -25,12 +25,27 @@ void UndoLastStrokes(Layer *layer){
         layer->strokes[layer->strokeCount].points = NULL;
         layer->strokes[layer->strokeCount].pointCount = 0;
         layer->strokes[layer->strokeCount].capacity = 0;
+
+        BeginTextureMode(layer->texture);
+        ClearBackground(BLANK);
+        for(int i = 0; i < layer->strokeCount; i++)
+            RenderStroke(&layer->strokes[i], 0);
+        EndTextureMode();
     }
 }
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
-        AddStrokeToLayer(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], *currentStroke);
+        Layer *activeLayer = &doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer];
+
+        AddStrokeToLayer(activeLayer, *currentStroke);
+
+        BeginTextureMode(activeLayer->texture);
+        ClearBackground(BLANK);
+        for(int i = 0; i < activeLayer->strokeCount; i++){
+            RenderStroke(&activeLayer->strokes[i], 0);
+        }
+        EndTextureMode();
     } else{
         free(currentStroke->points);
     }

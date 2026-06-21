@@ -103,6 +103,12 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
+            layer->texture = LoadRenderTexture((int)doc->pageWidth, (int)doc->pageHeight);
+            BeginTextureMode(layer->texture);
+            ClearBackground(BLANK);
+            for(int s = 0; s < layer->strokeCount; s++)
+                RenderStroke(&layer->strokes[s], 0);
+            EndTextureMode();
         }
     }
     doc->activePage = 0;

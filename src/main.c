@@ -25,7 +25,7 @@ int main(void){
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
     Document doc = {0};
-    AddPageToDocument(&doc);
+    //AddPageToDocument(&doc);
     doc.enableLayers = false;
     doc.pattern = BG_BLANK;
     doc.activeBrush = BRUSH_PEN;
@@ -244,7 +244,7 @@ int main(void){
         GUIHeaderDock(&doc, &settings, mousePos);
         // layer panel
         if(doc.enableLayers && !settings.showSettings){
-            GUILayerPanel(&doc);
+            GUILayerPanel(&doc, currentStroke);
         }
         // settings page
         if(settings.showSettings){

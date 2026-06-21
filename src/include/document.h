@@ -31,6 +31,7 @@ typedef struct {
     int strokeCount;
     int capacity;
     bool isVisible;
+    RenderTexture2D texture;
 } Layer;
 
 typedef struct {
