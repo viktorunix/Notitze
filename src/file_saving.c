@@ -19,6 +19,8 @@ void SaveDocumentBinary(const char *filename, Document *doc){
 
     fwrite(&doc->useBakedRendering, sizeof(bool),1,file);
     fwrite(&doc->renderScale, sizeof(float), 1, file);
+
+    fwrite(&doc->pressureEnabled, sizeof(bool),1,file);
     for (int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         fwrite(&page->layerCount, sizeof(int),1,file);
@@ -78,6 +80,11 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         doc->renderScale = 2.0f;
     }
 
+    if(version >=2){
+        fread(&doc->pressureEnabled, sizeof(bool),1,file);
+    }else{
+        doc->pressureEnabled = false;
+    }
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
         Page *page = &doc->pages[p];
