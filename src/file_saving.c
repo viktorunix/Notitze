@@ -104,10 +104,15 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 layer->strokes[s] = stroke;
             }
             layer->texture = LoadRenderTexture((int)doc->pageWidth, (int)doc->pageHeight);
+            SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
             BeginTextureMode(layer->texture);
             ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = RENDER_SCALE;
+            BeginMode2D(bakeCam);
             for(int s = 0; s < layer->strokeCount; s++)
                 RenderStroke(&layer->strokes[s], 0);
+            EndMode2D();
             EndTextureMode();
         }
     }

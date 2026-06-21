@@ -4,7 +4,7 @@
 #include "raymath.h"
 #include "brush.h"
 #include "paper.h"
-
+#define RENDER_SCALE 2.0f
 typedef enum {
     BG_BLANK = 0,
     BG_LINED,

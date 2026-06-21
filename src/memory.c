@@ -26,11 +26,13 @@ void AddLayerToPage(Page *page, float width, float height){
     page->layers[page->layerCount] = (Layer){0};
     page->layers[page->layerCount].isVisible = true;
 
-    page->layers[page->layerCount].texture = LoadRenderTexture((int)width, (int)height);
+    page->layers[page->layerCount].texture = LoadRenderTexture((int)width * RENDER_SCALE, (int)height * RENDER_SCALE);
+    SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
     BeginTextureMode(page->layers[page->layerCount].texture);
     ClearBackground(BLANK);
     EndTextureMode();
 
+    
     page->activeLayer = page->layerCount;
     page->layerCount++;
 }

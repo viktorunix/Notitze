@@ -235,8 +235,12 @@ int main(void){
             for(int l = 0; l < page->layerCount; l++){
                 Layer *layer = &page->layers[l];
                 if(!layer->isVisible) continue;
-                for(int i = 0; i < layer->strokeCount; i++)
-                    RenderStroke(&layer->strokes[i], floatY);
+
+                Rectangle source = {0, 0, (float) layer->texture.texture.width, -(float)layer->texture.texture.height};
+                Rectangle destination = {0, floatY, doc.pageWidth, doc.pageHeight};
+                DrawTexturePro(layer->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+                //for(int i = 0; i < layer->strokeCount; i++)
+                //    RenderStroke(&layer->strokes[i], floatY);
             }
         }
 

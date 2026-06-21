@@ -28,9 +28,15 @@ void UndoLastStrokes(Layer *layer){
 
         BeginTextureMode(layer->texture);
         ClearBackground(BLANK);
+        Camera2D bakeCam = {0};
+        bakeCam.zoom = RENDER_SCALE;
+        BeginMode2D(bakeCam);
         for(int i = 0; i < layer->strokeCount; i++)
             RenderStroke(&layer->strokes[i], 0);
+        EndMode2D();
         EndTextureMode();
+        
+
     }
 }
 void FinishStroke(Stroke *currentStroke, Document *doc){
@@ -42,9 +48,14 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
         BeginTextureMode(activeLayer->texture);
         ClearBackground(BLANK);
+        Camera2D bakeCam = {0};
+        bakeCam.zoom = RENDER_SCALE;
+        BeginMode2D(bakeCam);
         for(int i = 0; i < activeLayer->strokeCount; i++){
             RenderStroke(&activeLayer->strokes[i], 0);
         }
+        
+        EndMode2D();
         EndTextureMode();
     } else{
         free(currentStroke->points);
