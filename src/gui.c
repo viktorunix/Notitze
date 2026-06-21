@@ -56,8 +56,19 @@ Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, flo
         0.5f * ((2.0f * p1.y) + (-p0.y + p2.y) * t + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 + (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3)
     };
 }
+
+Color Premultiply(Color c){
+    Color result = {
+        (unsigned char)((c.r * c.a)/ 255),
+        (unsigned char)((c.g * c.a) / 255),
+        (unsigned char)((c.b * c.a) / 255),
+        c.a
+    };
+    return result;
+}
 void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
     if(stroke->pointCount == 0) return;
+    Color pColor = Premultiply(stroke->color);
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
         if(stroke->pointCount < 3){
             for(int j = 0; j < stroke->pointCount - 1; j++){
@@ -66,8 +77,8 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
                 float pressure = pressureEnabled ? stroke->points[j].pressure : 1.0f;
                 float thick = stroke->thickness * pressure;
                 thick = fmaxf(thick, 0.5f);
-                DrawLineEx(p1, p2, thick, stroke->color);
-                DrawCircleV(p1, thick / 2.0f, stroke->color);
+                DrawLineEx(p1, p2, thick, pColor);
+                DrawCircleV(p1, thick / 2.0f, pColor);
             }
         } else {
             //catmull-rom spline
@@ -88,7 +99,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
                 Vector2 lastP = p1.pos;
                 float startPressure = pressureEnabled ? p1.pressure : 1.0f;
                 float startThickness = fmaxf(stroke->thickness  * startPressure, 0.5f);
-                DrawCircleV(p1.pos, startThickness / 2.0f, stroke->color);
+                DrawCircleV(p1.pos, startThickness / 2.0f, pColor);
                 for(int i = 1; i <=segments; i++){
                     float t = (float)i / (float)segments;
                     Vector2 nextP = CalculateSplinePoint(p0.pos,p1.pos,p2.pos,p3.pos, t);
@@ -97,8 +108,8 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
                     float finalPressure = pressureEnabled ? currentPres : 1.0f;
                     float currentThick = stroke->thickness * finalPressure;
                     currentThick = fmaxf(currentThick, 0.5f);
-                    DrawLineEx(lastP, nextP, currentThick, stroke->color);
-                    DrawCircleV(nextP, currentThick / 2.0f, stroke->color);
+                    DrawLineEx(lastP, nextP, currentThick, pColor);
+                    DrawCircleV(nextP, currentThick / 2.0f, pColor);
                     lastP = nextP;
                 }
             }
@@ -108,12 +119,13 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
             float endPressure = pressureEnabled ? stroke->points[stroke->pointCount - 1].pressure : 1.0f;
             float endThick = stroke->thickness * endPressure;
             endThick = fmaxf(endThick, 0.5f);
-            DrawCircleV(last, endThick/ 2.0f, stroke->color);
+            DrawCircleV(last, endThick/ 2.0f, pColor);
         }
     }
     else if (stroke->type == BRUSH_PENCIL){
         Color graphite = stroke->color;
         graphite.a = 100;
+        graphite = Premultiply(graphite);
         if(stroke->pointCount < 3){
             for(int j = 0; j< stroke->pointCount - 1; j++){
                 Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
@@ -296,8 +308,10 @@ void RebakeAllLayers(Document *doc){
             Camera2D bakeCam = {0};
             bakeCam.zoom = doc->renderScale;
             BeginMode2D(bakeCam);
+            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0 ; i< layer->strokeCount; i++)
                 RenderStroke(&layer->strokes[i], 0, doc->pressureEnabled);
+            EndBlendMode();
             EndMode2D();
             EndTextureMode();
         }   
@@ -324,14 +338,18 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
         if(doc->useBakedRendering){
             Rectangle source = {0,0, (float)layer->texture.texture.width, -(float)layer->texture.texture.height};
             Rectangle destination = {0, pageYOffset, doc->pageWidth, doc->pageHeight};
+            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             DrawTexturePro(layer->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+            EndBlendMode();
         }else{
             for(int i = 0; i < layer->strokeCount; i++){
                 RenderStroke(&layer->strokes[i], pageYOffset, doc->pressureEnabled);
             }
         }
         if(doc->isDrawing && p == doc->activePage && l == page->activeLayer)
+            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             RenderStroke(currentStroke, pageYOffset,doc->pressureEnabled);
-    }
+            EndBlendMode();
+        }
 
 }

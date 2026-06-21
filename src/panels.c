@@ -113,8 +113,6 @@ bool startUpWindow(Document *doc, Camera2D *camera){
     }
     EndDrawing();
     doc->pageFormat = startFormat;
-    //doc->pageWidth = calcW;
-    //doc->pageHeight = calcH;
     doc->ppi = startPPI;
     return true;
 }

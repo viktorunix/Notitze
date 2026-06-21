@@ -239,7 +239,9 @@ int main(void){
 
                 Rectangle source = {0, 0, (float) layer->texture.texture.width, -(float)layer->texture.texture.height};
                 Rectangle destination = {0, floatY, doc.pageWidth, doc.pageHeight};
+                BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
                 DrawTexturePro(layer->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+                EndBlendMode();
             }
         }
 

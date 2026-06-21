@@ -51,10 +51,11 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
             Camera2D bakeCam = {0};
             bakeCam.zoom = doc->renderScale;
             BeginMode2D(bakeCam);
+            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0; i < activeLayer->strokeCount; i++){
                 RenderStroke(&activeLayer->strokes[i], 0, doc->pressureEnabled);
             }
-
+            EndBlendMode();
             EndMode2D();
             EndTextureMode();
         }
