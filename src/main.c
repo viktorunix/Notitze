@@ -72,7 +72,32 @@ int main(void){
 
     float currentPressure = 1.0f;
     bool isStartup = true;
+
+    //brush circle texture
+    //Image brushImage = GenImageGradientRadial(64,64,0.0f, WHITE, BLANK);
+    Image brushImage = GenImageColor(256,256, BLANK);
+    for(int y = 0; y <256; y++){
+        for(int x = 0; x < 256; x++){
+            float dist = Vector2Distance((Vector2){x + 0.5f, y+0.5f}, (Vector2){128.0f, 128.0f});
+
+            if(dist <=126.0f){
+                ImageDrawPixel(&brushImage, x, y, WHITE);
+
+            }else if(dist <= 128.0f){
+                float alpha = (128.0f - dist) / 2.0f;
+                Color c = WHITE;
+                c.a = (unsigned char)(alpha * 255.0f);
+                ImageDrawPixel(&brushImage, x, y, c);
+            }
+        }
+    }
+    Texture2D softBrushTex = LoadTextureFromImage(brushImage);
+    UnloadImage(brushImage);
+    SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
+    doc.brushTex = softBrushTex;
     while(!WindowShouldClose()){
+
+        
         if(isStartup){
             isStartup = startUpWindow(&doc,&camera);
             continue;

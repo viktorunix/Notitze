@@ -59,5 +59,7 @@ typedef struct {
     bool useBakedRendering;
     float renderScale;
     bool pressureEnabled;
+
+    Texture2D brushTex;
 } Document;
 #endif

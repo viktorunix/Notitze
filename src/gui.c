@@ -66,7 +66,7 @@ Color Premultiply(Color c){
     };
     return result;
 }
-void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
+void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled, Texture2D brushTex){
     if(stroke->pointCount == 0) return;
     Color pColor = Premultiply(stroke->color);
     if(stroke->type == BRUSH_PEN ){
@@ -76,9 +76,21 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
                 Vector2 p2 = {stroke->points[j+1].pos.x, stroke->points[j+1].pos.y + pageYOffset};
                 float pressure = pressureEnabled ? stroke->points[j].pressure : 1.0f;
                 float thick = stroke->thickness * pressure;
-                thick = fmaxf(thick, 0.5f);
-                DrawLineEx(p1, p2, thick, pColor);
-                DrawCircleV(p1, thick / 2.0f, pColor);
+                thick = fmaxf(thick * 0.05f, 0.5f);
+
+                float spacing = fmaxf(thick * 0.1f, 1.0f);
+                float dist = Vector2Distance(p1,p2);
+                Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
+                for(float d = 0; d < dist; d += spacing){
+                    Vector2 pos = Vector2Add(p1, Vector2Scale(dir, d));
+                    Rectangle source = {0, 0, (float)brushTex.width, (float)brushTex.height};
+                    Rectangle destination = {pos.x, pos.y, thick, thick};
+                    Vector2 origin = {thick / 2.0f, thick / 2.0f};
+
+                    DrawTexturePro(brushTex, source, destination, origin, 0.0f, pColor);
+                }
+                //DrawLineEx(p1, p2, thick, pColor);
+                //DrawCircleV(p1, thick / 2.0f, pColor);
             }
         } else {
             //catmull-rom spline
@@ -93,24 +105,25 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
                 p2.pos.y += pageYOffset;
                 p3.pos.y += pageYOffset;
 
-                int segments = (int)(Vector2Distance(p1.pos,p2.pos)/2.0f);
-                if(segments < 2) segments = 2;
+                float segDist = Vector2Distance(p1.pos, p2.pos);
 
-                Vector2 lastP = p1.pos;
                 float startPressure = pressureEnabled ? p1.pressure : 1.0f;
-                float startThickness = fmaxf(stroke->thickness  * startPressure, 0.5f);
-                DrawCircleV(p1.pos, startThickness / 2.0f, pColor);
-                for(int i = 1; i <=segments; i++){
-                    float t = (float)i / (float)segments;
-                    Vector2 nextP = CalculateSplinePoint(p0.pos,p1.pos,p2.pos,p3.pos, t);
-                    
-                    float currentPres = Lerp(p1.pressure, p2.pressure, t);
-                    float finalPressure = pressureEnabled ? currentPres : 1.0f;
-                    float currentThick = stroke->thickness * finalPressure;
-                    currentThick = fmaxf(currentThick, 0.5f);
-                    DrawLineEx(lastP, nextP, currentThick, pColor);
-                    DrawCircleV(nextP, currentThick / 2.0f, pColor);
-                    lastP = nextP;
+                float baseThickness = fmaxf(stroke->thickness * startPressure, 0.5f);
+                float spacing = fmaxf(baseThickness * 0.05f, 0.5f);
+
+                for(float d = 0; d < segDist; d += spacing){
+                    float t = d/ segDist;
+                    Vector2 nextP = CalculateSplinePoint(p0.pos, p1.pos, p2.pos,p3.pos, t);
+
+                    float currentPressure = Lerp(p1.pressure, p2.pressure, t);
+                    float finalPressure = pressureEnabled? currentPressure : 1.0f;
+                    float currentThickness = fmaxf(stroke->thickness * finalPressure, 0.5f);
+
+                    Rectangle source = {0, 0, (float)brushTex.width, (float)brushTex.height};
+                    Rectangle destination = {nextP.x, nextP.y, currentThickness, currentThickness};
+                    Vector2 origin = {currentThickness/2.0f, currentThickness/2.0f};
+
+                    DrawTexturePro(brushTex, source, destination, origin, 0.0f, pColor);
                 }
             }
         }
@@ -119,7 +132,12 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
             float endPressure = pressureEnabled ? stroke->points[stroke->pointCount - 1].pressure : 1.0f;
             float endThick = stroke->thickness * endPressure;
             endThick = fmaxf(endThick, 0.5f);
-            DrawCircleV(last, endThick/ 2.0f, pColor);
+            //DrawCircleV(last, endThick/ 2.0f, pColor);
+
+            Rectangle source = {0,0, (float)brushTex.width, (float)brushTex.height};
+            Rectangle destination = {last.x, last.y, endThick, endThick};
+            Vector2 origin = {endThick / 2.0f, endThick / 2.0f};
+            DrawTexturePro(brushTex, source, destination, origin, 0.0f, pColor);
         }
     }else if (stroke->type == BRUSH_HIGHLIGHTER){
         Color hColor = stroke->color;
@@ -335,10 +353,10 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
             BeginMode2D(thumbCam);
             if(!doc->useBakedRendering){
                 for(int i = 0 ; i < layer->strokeCount; i++)
-                    RenderStroke(&layer->strokes[i],0 ,doc->pressureEnabled);
+                    RenderStroke(&layer->strokes[i],0 ,doc->pressureEnabled, doc->brushTex);
             }
             if(doc->isDrawing && doc->activePage >= 0 && l == aPage->activeLayer)
-                RenderStroke(&currentStroke, 0, doc->pressureEnabled);
+                RenderStroke(&currentStroke, 0, doc->pressureEnabled, doc->brushTex);
             EndMode2D;
             EndScissorMode();
         }
@@ -371,7 +389,7 @@ void RebakeAllLayers(Document *doc){
             BeginMode2D(bakeCam);
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0 ; i< layer->strokeCount; i++)
-                RenderStroke(&layer->strokes[i], 0, doc->pressureEnabled);
+                RenderStroke(&layer->strokes[i], 0, doc->pressureEnabled, doc->brushTex);
             EndBlendMode();
             EndMode2D();
             EndTextureMode();
@@ -397,12 +415,12 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
             EndBlendMode();
         }else{
             for(int i = 0; i < layer->strokeCount; i++){
-                RenderStroke(&layer->strokes[i], pageYOffset, doc->pressureEnabled);
+                RenderStroke(&layer->strokes[i], pageYOffset, doc->pressureEnabled, doc->brushTex);
             }
         }
         if(doc->isDrawing && p == doc->activePage && l == page->activeLayer){
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-            RenderStroke(currentStroke, pageYOffset,doc->pressureEnabled);
+            RenderStroke(currentStroke, pageYOffset,doc->pressureEnabled, doc->brushTex);
             EndBlendMode();
     
         }
