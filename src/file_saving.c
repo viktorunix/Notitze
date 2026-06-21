@@ -130,7 +130,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             bakeCam.zoom = doc->renderScale;
             BeginMode2D(bakeCam);
             for(int s = 0; s < layer->strokeCount; s++)
-                RenderStroke(&layer->strokes[s], 0);
+                RenderStroke(&layer->strokes[s], 0, doc->pressureEnabled);
             EndMode2D();
             EndTextureMode();
         }
@@ -167,7 +167,7 @@ const char* ShowOpenFileDialog() {
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = NULL;
-ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";    ofn.lpstrFile = filename;
+    ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";    ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
     ofn.lpstrDefExt = "ntz";

@@ -18,7 +18,7 @@ void MoveActivePageDown(Document *doc){
     }
 }
 
-void UndoLastStrokes(Layer *layer, float renderScale){
+void UndoLastStrokes(Layer *layer, float renderScale, bool pressureEnabled){
     if(layer->strokeCount > 0 ){
         layer->strokeCount--;
         free(layer->strokes[layer->strokeCount].points);
@@ -32,7 +32,7 @@ void UndoLastStrokes(Layer *layer, float renderScale){
         bakeCam.zoom = renderScale;
         BeginMode2D(bakeCam);
         for(int i = 0; i < layer->strokeCount; i++)
-            RenderStroke(&layer->strokes[i], 0);
+            RenderStroke(&layer->strokes[i], 0, pressureEnabled);
         EndMode2D();
         EndTextureMode();
         
@@ -52,7 +52,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
             bakeCam.zoom = doc->renderScale;
             BeginMode2D(bakeCam);
             for(int i = 0; i < activeLayer->strokeCount; i++){
-                RenderStroke(&activeLayer->strokes[i], 0);
+                RenderStroke(&activeLayer->strokes[i], 0, doc->pressureEnabled);
             }
 
             EndMode2D();
