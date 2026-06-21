@@ -18,20 +18,48 @@ void MoveActivePageDown(Document *doc){
     }
 }
 
-void UndoLastStrokes(Layer *layer){
+void UndoLastStrokes(Layer *layer, float renderScale){
     if(layer->strokeCount > 0 ){
         layer->strokeCount--;
         free(layer->strokes[layer->strokeCount].points);
         layer->strokes[layer->strokeCount].points = NULL;
         layer->strokes[layer->strokeCount].pointCount = 0;
         layer->strokes[layer->strokeCount].capacity = 0;
+
+        BeginTextureMode(layer->texture);
+        ClearBackground(BLANK);
+        Camera2D bakeCam = {0};
+        bakeCam.zoom = renderScale;
+        BeginMode2D(bakeCam);
+        for(int i = 0; i < layer->strokeCount; i++)
+            RenderStroke(&layer->strokes[i], 0);
+        EndMode2D();
+        EndTextureMode();
+        
+
     }
 }
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
-        AddStrokeToLayer(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], *currentStroke);
+        Layer *activeLayer = &doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer];
+
+        AddStrokeToLayer(activeLayer, *currentStroke);
+        if(doc->useBakedRendering){
+            BeginTextureMode(activeLayer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = doc->renderScale;
+            BeginMode2D(bakeCam);
+            for(int i = 0; i < activeLayer->strokeCount; i++){
+                RenderStroke(&activeLayer->strokes[i], 0);
+            }
+
+            EndMode2D();
+            EndTextureMode();
+        }
     } else{
+        
         free(currentStroke->points);
     }
     *currentStroke = (Stroke){0};

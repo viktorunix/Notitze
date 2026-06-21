@@ -4,7 +4,6 @@
 #include "raymath.h"
 #include "brush.h"
 #include "paper.h"
-
 typedef enum {
     BG_BLANK = 0,
     BG_LINED,
@@ -31,6 +30,7 @@ typedef struct {
     int strokeCount;
     int capacity;
     bool isVisible;
+    RenderTexture2D texture;
 } Layer;
 
 typedef struct {
@@ -55,5 +55,8 @@ typedef struct {
     float pageWidth;
     float pageHeight;
     int ppi;
+
+    bool useBakedRendering;
+    float renderScale;
 } Document;
 #endif

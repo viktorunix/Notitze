@@ -31,6 +31,7 @@ typedef struct {
     float currentBrushThickness;
 
     Color *pallete;
+
 } Settings;
 const char* KeyToString(int key);
 void SettingsBinds(BindState *listeningForBind, Settings *settings);

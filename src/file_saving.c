@@ -16,6 +16,9 @@ void SaveDocumentBinary(const char *filename, Document *doc){
     fwrite(&doc->pattern, sizeof(int), 1, file);
     fwrite(&doc->enableLayers, sizeof(bool),1,file);
 
+
+    fwrite(&doc->useBakedRendering, sizeof(bool),1,file);
+    fwrite(&doc->renderScale, sizeof(float), 1, file);
     for (int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         fwrite(&page->layerCount, sizeof(int),1,file);
@@ -66,6 +69,15 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     fread(&doc->pattern, sizeof(int),1,file);
     fread(&doc->enableLayers, sizeof(bool),1,file);
 
+    if(version >=2){
+        fread(&doc->useBakedRendering, sizeof(bool),1,file);
+        fread(&doc->renderScale, sizeof(float), 1, file);
+
+    } else{
+        doc->useBakedRendering = true;
+        doc->renderScale = 2.0f;
+    }
+
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
         Page *page = &doc->pages[p];
@@ -103,6 +115,17 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
+            layer->texture = LoadRenderTexture((int)doc->pageWidth, (int)doc->pageHeight);
+            SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
+            BeginTextureMode(layer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = doc->renderScale;
+            BeginMode2D(bakeCam);
+            for(int s = 0; s < layer->strokeCount; s++)
+                RenderStroke(&layer->strokes[s], 0);
+            EndMode2D();
+            EndTextureMode();
         }
     }
     doc->activePage = 0;

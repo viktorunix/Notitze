@@ -64,6 +64,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
                 Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
                 Vector2 p2 = {stroke->points[j+1].pos.x, stroke->points[j+1].pos.y + pageYOffset};
                 float thick = stroke->thickness * stroke->points[j].pressure;
+                thick = fmaxf(thick, 0.5f);
                 DrawLineEx(p1, p2, thick, stroke->color);
                 DrawCircleV(p1, thick / 2.0f, stroke->color);
             }
@@ -91,7 +92,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
                     
                     float currentPres = Lerp(p1.pressure, p2.pressure, t);
                     float currentThick = stroke->thickness * currentPres;
-                    
+                    currentThick = fmaxf(currentThick, 0.5f);
                     DrawLineEx(lastP, nextP, currentThick, stroke->color);
                     DrawCircleV(nextP, currentThick / 2.0f, stroke->color);
                     lastP = nextP;
@@ -100,7 +101,9 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
         }
         if(stroke->pointCount > 0){
             Vector2 last = {stroke->points[stroke->pointCount - 1].pos.x, stroke->points[stroke->pointCount-1].pos.y + pageYOffset};
-            DrawCircleV(last, (stroke->thickness * stroke->points[stroke->pointCount - 1].pressure)/ 2.0f, stroke->color);
+            float endThick = stroke->thickness * stroke->points[stroke->pointCount - 1].pressure;
+            endThick = fmaxf(endThick, 0.5f);
+            DrawCircleV(last, endThick/ 2.0f, stroke->color);
         }
     }
     else if (stroke->type == BRUSH_PENCIL){
@@ -117,6 +120,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
                 Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
 
                 float currentThick = stroke->thickness * stroke->points[j].pressure;
+                currentThick = fmaxf(currentThick, 0.5f);
                 for(float d = 0; d < dist; d+= 1.0f){
                     Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
                     int dustCount = (int)currentThick;
@@ -151,7 +155,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
                     
                     float currentPres = Lerp(p1.pressure, p2.pressure, t);
                     float currentThick = stroke->thickness * currentPres;
-
+                    currentThick=fmaxf(currentThick, 0.5f);
                     int dustCount=(int)(currentPres);
                     if(dustCount <3) dustCount = 3;
                     for (int k = 0; k < dustCount; k++) {
@@ -276,7 +280,7 @@ void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     }
 }
 
-void GUILayerPanel(Document *doc){
+void GUILayerPanel(Document *doc, Stroke currentStroke){
     int barY = 20;
     int barHeight = 140;
     Page *aPage = &doc->pages[doc->activePage];
@@ -290,7 +294,7 @@ void GUILayerPanel(Document *doc){
     DrawRectangleRoundedLinesEx((Rectangle){pX, pY, pW, pH}, 0.1f, 10, 2.0f, (Color){60,60,65,255});
 
     DrawText("Layers", pX + 20, pY + 18, 20, WHITE);
-    if(GUIButton((Rectangle){pX + pW -50, pY + 10, 35, 35}, "+", false)) AddLayerToPage(aPage);
+    if(GUIButton((Rectangle){pX + pW -50, pY + 10, 35, 35}, "+", false)) AddLayerToPage(aPage, doc->pageWidth, doc->pageHeight, doc->renderScale);
 
     int lY = pY + 60;
     for(int l = aPage->layerCount - 1; l >=0; l--){
@@ -301,7 +305,28 @@ void GUILayerPanel(Document *doc){
         Rectangle thumbRec = {pX + 60, lY + 6, 80, 113};
         DrawRectangleRec(thumbRec, RAYWHITE);
 
-        BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
+        if(doc->useBakedRendering){
+            Rectangle source = {0,0, (float)layer->texture.texture.width, -(float)layer->texture.texture.height};
+            DrawTexturePro(layer->texture.texture, source, thumbRec, (Vector2){0,0}, 0.0f, WHITE);
+        }
+        if(!doc->useBakedRendering || (doc->isDrawing && doc->activePage >= 0 && l == aPage->activeLayer)){
+            BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
+            Camera2D thumbCam = {0};
+            thumbCam.target = (Vector2){0,0};
+            thumbCam.offset = (Vector2){thumbRec.x, thumbRec.y};
+            thumbCam.zoom = thumbRec.width / doc->pageWidth;
+            BeginMode2D(thumbCam);
+            if(!doc->useBakedRendering){
+                for(int i = 0 ; i < layer->strokeCount; i++)
+                    RenderStroke(&layer->strokes[i],0 );
+            }
+            if(doc->isDrawing && doc->activePage >= 0 && l == aPage->activeLayer)
+                RenderStroke(&currentStroke, 0);
+            EndMode2D;
+            EndScissorMode();
+        }
+
+        /*BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
 
         Camera2D thumbCam = {0};
         thumbCam.target = (Vector2){0,0};
@@ -314,6 +339,7 @@ void GUILayerPanel(Document *doc){
 
         EndMode2D();
         EndScissorMode();
+        */
         DrawRectangleLinesEx(thumbRec, 1.0f, LIGHTGRAY);
 
         if(GUIButton((Rectangle){pX+155,lY+ 42, pW - 170,40}, TextFormat("Layer %d", l+1), aPage->activeLayer == l))
@@ -325,7 +351,28 @@ void GUILayerPanel(Document *doc){
             DeleteActiveLayer(aPage);
     }
 }
+void RebakeAllLayers(Document *doc){
+    for(int p = 0; p < doc->pageCount; p++){
+        Page *page = &doc->pages[p];
+        for(int l = 0; l < page->layerCount; l++){
+            Layer *layer = &page->layers[l];
 
+            UnloadRenderTexture(layer->texture);
+            layer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
+            SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
+
+            BeginTextureMode(layer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = doc->renderScale;
+            BeginMode2D(bakeCam);
+            for(int i = 0 ; i< layer->strokeCount; i++)
+                RenderStroke(&layer->strokes[i], 0);
+            EndMode2D();
+            EndTextureMode();
+        }   
+    }
+}
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     //paper
     DrawRectangle(8, pageYOffset + 8, doc->pageWidth, doc->pageHeight, BLACK);
@@ -344,8 +391,17 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     for(int l = 0; l < page->layerCount; l++){
         Layer *layer = &page->layers[l];
         if(!layer->isVisible) continue;
-        for(int i = 0; i < layer->strokeCount; i++)
-            RenderStroke(&layer->strokes[i], pageYOffset);
+        if(doc->useBakedRendering){
+            Rectangle source = {0,0, (float)layer->texture.texture.width, -(float)layer->texture.texture.height};
+            Rectangle destination = {0, pageYOffset, doc->pageWidth, doc->pageHeight};
+            DrawTexturePro(layer->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+        }else{
+            for(int i = 0; i < layer->strokeCount; i++){
+                RenderStroke(&layer->strokes[i], pageYOffset);
+            }
+        }
+        //for(int i = 0; i < layer->strokeCount; i++)
+        //RenderStroke(&layer->strokes[i], pageYOffset);
         if(doc->isDrawing && p == doc->activePage && l == page->activeLayer)
             RenderStroke(currentStroke, pageYOffset);
     }
