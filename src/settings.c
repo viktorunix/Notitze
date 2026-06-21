@@ -88,6 +88,11 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->useBakedRendering ? "Mode: Baked" : "Mode: Live", doc->useBakedRendering))
         doc->useBakedRendering = !doc->useBakedRendering;
     engineY +=50;
+    if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->pressureEnabled ? "Pressure: ON" : "Pressure: OFF", doc->pressureEnabled)){
+        doc->pressureEnabled = !doc->pressureEnabled;
+        if(doc->useBakedRendering) RebakeAllLayers(doc);
+    }
+    engineY +=50;
     DrawText("Bake Scale", col1X, engineY + 10, 20, LIGHTGRAY);
     if(GUIButton((Rectangle) {col1X + 110, engineY, 30, 40}, "-", false)){
         if(doc->renderScale > 1.0f){

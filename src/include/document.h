@@ -58,5 +58,6 @@ typedef struct {
 
     bool useBakedRendering;
     float renderScale;
+    bool pressureEnabled;
 } Document;
 #endif
