@@ -383,13 +383,6 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     DrawRectangle(8, pageYOffset + 8, doc->pageWidth, doc->pageHeight, BLACK);
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
-    //paper drag bar
-    DrawRectangle(0, pageYOffset, doc->pageWidth, 40, (Color){200,200,200,255});
-    DrawText("|||", doc->pageWidth/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
-    // active page highlight
-    Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
-    int borderThickness = (p == doc->activePage) ? 4 : 1;
-    DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
     //strokes
     Page *page = &doc->pages[p];
 
@@ -407,10 +400,19 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
                 RenderStroke(&layer->strokes[i], pageYOffset, doc->pressureEnabled);
             }
         }
-        if(doc->isDrawing && p == doc->activePage && l == page->activeLayer)
+        if(doc->isDrawing && p == doc->activePage && l == page->activeLayer){
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             RenderStroke(currentStroke, pageYOffset,doc->pressureEnabled);
             EndBlendMode();
+    
         }
+    }
+    //paper drag bar
+    DrawRectangle(0, pageYOffset, doc->pageWidth, 40, (Color){200,200,200,255});
+    DrawText("|||", doc->pageWidth/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
+    // active page highlight
+    Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
+    int borderThickness = (p == doc->activePage) ? 4 : 1;
+    DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
 
 }

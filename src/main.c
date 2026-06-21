@@ -157,6 +157,13 @@ int main(void){
         if(draggedPage != -1){
 
         } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+            float clampedX = mouseWorldPos.x;
+            if(clampedX < 0.0f) clampedX = 0.0f;
+            if(clampedX > doc.pageWidth) clampedX = doc.pageWidth;
+
+            float clampedY = localMouseY;
+            if(clampedY < 40.0f) clampedY = 40.0f;
+            if(clampedY > doc.pageHeight) clampedY = doc.pageHeight;
             if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
@@ -185,9 +192,9 @@ int main(void){
             } else {
                 //shapes
                 if(currentStroke.pointCount == 1){
-                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY},1.0f);
+                    AddPointToStroke(&currentStroke, (Vector2){clampedX, clampedY},1.0f);
                 } else if (currentStroke.pointCount == 2){
-                    currentStroke.points[1].pos = (Vector2){mouseWorldPos.x, localMouseY};
+                    currentStroke.points[1].pos = (Vector2){clampedX, clampedY};
                 }
             }
         } else if(isPanning){
