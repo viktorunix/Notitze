@@ -1,5 +1,5 @@
-#ifndef WINDOWS
-#define WINDOWS
+#ifndef PANELS
+#define PANELS
 #include "raylib.h"
 #include "gui.h"
 #include "settings.h"

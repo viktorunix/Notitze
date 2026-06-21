@@ -1,11 +1,12 @@
 #include "include/memory.h"
-void AddPointToStroke(Stroke *stroke, Vector2 point){
+void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure){
     if(stroke->pointCount >= stroke->capacity){
         stroke->capacity = stroke->capacity == 0 ? 128 : stroke->capacity * 2;
-        stroke->points = (Vector2 *)realloc(stroke->points, stroke->capacity * sizeof(Vector2));
+        stroke->points = (StrokePoint *)realloc(stroke->points, stroke->capacity * sizeof(StrokePoint));
 
     }
-    stroke->points[stroke->pointCount++] = point;
+    stroke->points[stroke->pointCount].pos = point;
+    stroke->points[stroke->pointCount].pressure = pressure;
 }
 
 void AddStrokeToLayer(Layer *layer, Stroke stroke){
@@ -77,4 +78,5 @@ void FreeDocument(Document *doc){
         FreePage(&doc->pages[p]);
     free(doc->pages);
     *doc = (Document){0};
+    
 }

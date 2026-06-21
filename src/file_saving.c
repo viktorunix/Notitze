@@ -32,7 +32,7 @@ void SaveDocumentBinary(const char *filename, Document *doc){
                 fwrite(&stroke->color, sizeof(Color),1,file);
                 fwrite(&stroke->thickness, sizeof(float), 1, file);
                 fwrite(&stroke->pointCount, sizeof(int), 1, file);
-                fwrite(stroke->points, sizeof(Vector2), stroke->pointCount, file);
+                fwrite(stroke->points, sizeof(StrokePoint), stroke->pointCount, file);
             }
         }
     }
@@ -99,8 +99,8 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 fread(&stroke.thickness, sizeof(float),1,file);
                 fread(&stroke.pointCount, sizeof(int),1,file);
                 stroke.capacity = stroke.pointCount;
-                stroke.points = (Vector2 *)malloc(stroke.capacity * sizeof(Vector2));
-                fread(stroke.points, sizeof(Vector2), stroke.pointCount, file);
+                stroke.points = (StrokePoint *)malloc(stroke.capacity * sizeof(Vector2));
+                fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
         }

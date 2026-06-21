@@ -61,34 +61,39 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
         if(stroke->pointCount < 3){
             for(int j = 0; j < stroke->pointCount - 1; j++){
-                Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
-                Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
-                DrawLineEx(p1, p2, stroke->thickness, stroke->color);
-                DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
+                Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
+                Vector2 p2 = {stroke->points[j+1].pos.x, stroke->points[j+1].pos.y + pageYOffset};
+                float thick = stroke->thickness * stroke->points[j].pressure;
+                DrawLineEx(p1, p2, thick, stroke->color);
+                DrawCircleV(p1, thick / 2.0f, stroke->color);
             }
         } else {
             //catmull-rom spline
             for(int j = 0; j < stroke->pointCount - 1; j++){
-                Vector2 p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
-                Vector2 p1 = stroke->points[j];
-                Vector2 p2 = stroke->points[j + 1];
-                Vector2 p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
+                StrokePoint p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
+                StrokePoint p1 = stroke->points[j];
+                StrokePoint p2 = stroke->points[j + 1];
+                StrokePoint p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
 
-                p0.y += pageYOffset;
-                p1.y += pageYOffset;
-                p2.y += pageYOffset;
-                p3.y += pageYOffset;
+                p0.pos.y += pageYOffset;
+                p1.pos.y += pageYOffset;
+                p2.pos.y += pageYOffset;
+                p3.pos.y += pageYOffset;
 
-                int segments = (int)(Vector2Distance(p1,p2)/2.0f);
+                int segments = (int)(Vector2Distance(p1.pos,p2.pos)/2.0f);
                 if(segments < 2) segments = 2;
 
-                Vector2 lastP = p1;
-                DrawCircleV(p1,stroke->thickness / 2.0f, stroke->color);
+                Vector2 lastP = p1.pos;
+                DrawCircleV(p1.pos,(stroke->thickness * p1.pressure) / 2.0f, stroke->color);
                 for(int i = 1; i <=segments; i++){
                     float t = (float)i / (float)segments;
-                    Vector2 nextP = CalculateSplinePoint(p0,p1,p2,p3, t);
-                    DrawLineEx(lastP, nextP, stroke->thickness, stroke->color);
-                    DrawCircleV(nextP, stroke->thickness / 2.0f, stroke->color);
+                    Vector2 nextP = CalculateSplinePoint(p0.pos,p1.pos,p2.pos,p3.pos, t);
+                    
+                    float currentPres = Lerp(p1.pressure, p2.pressure, t);
+                    float currentThick = stroke->thickness * currentPres;
+                    
+                    DrawLineEx(lastP, nextP, currentThick, stroke->color);
+                    DrawCircleV(nextP, currentThick / 2.0f, stroke->color);
                     lastP = nextP;
                 }
             }
@@ -99,20 +104,22 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
         graphite.a = 100;
         if(stroke->pointCount < 3){
             for(int j = 0; j< stroke->pointCount - 1; j++){
-                Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
-                Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
+                Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
+                Vector2 p2 = {stroke->points[j+1].pos.x, stroke->points[j+1].pos.y + pageYOffset};
 
-                SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
+                SetRandomSeed((unsigned int)(p1.x * 1337 + p1.y * 9999));
 
                 float dist = Vector2Distance(p1, p2);
                 Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
 
+                float currentThick = stroke->thickness * stroke->points[j].pressure;
                 for(float d = 0; d < dist; d+= 1.0f){
                     Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
-
-                    for(int k = 0; k <2 * stroke->thickness; k++){
-                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
-                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                    int dustCount = (int)currentThick;
+                    if(dustCount < 3) dustCount = 3;
+                    for(int k = 0; k <dustCount; k++){
+                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
+                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
 
                         Vector2 speck = {basePos.x + randX, basePos.y + randY};
                         DrawCircleV(speck, 0.5f, graphite);
@@ -122,26 +129,30 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
         }
         else{
             for(int j = 0; j< stroke->pointCount - 1; j++){
-                Vector2 p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
-                Vector2 p1 = stroke->points[j];
-                Vector2 p2 = stroke->points[j + 1];
-                Vector2 p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
+                StrokePoint p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
+                StrokePoint p1 = stroke->points[j];
+                StrokePoint p2 = stroke->points[j + 1];
+                StrokePoint p3 = (j + 2 < stroke->pointCount) ? stroke->points[j + 2] : p2;
 
-                p0.y += pageYOffset;
-                p1.y += pageYOffset;
-                p2.y += pageYOffset;
-                p3.y += pageYOffset;
+                p0.pos.y += pageYOffset;
+                p1.pos.y += pageYOffset;
+                p2.pos.y += pageYOffset;
+                p3.pos.y += pageYOffset;
 
-                SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
-                float segDist = Vector2Distance(p1, p2);
+                SetRandomSeed((unsigned int)(p1.pos.x * 1337 + p1.pos.y * 9999));
+                float segDist = Vector2Distance(p1.pos, p2.pos);
                 for (float d = 0; d <segDist; d+=1.0f){
                     float t = d / segDist;
-                    Vector2 basePos = CalculateSplinePoint(p0,p1,p2,p3,t);
-                    int dustCount=(int)(stroke->thickness);
+                    Vector2 basePos = CalculateSplinePoint(p0.pos,p1.pos,p2.pos,p3.pos,t);
+                    
+                    float currentPres = Lerp(p1.pressure, p2.pressure, t);
+                    float currentThick = stroke->thickness * currentPres;
+
+                    int dustCount=(int)(currentPres);
                     if(dustCount <3) dustCount = 3;
                     for (int k = 0; k < dustCount; k++) {
-                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
-                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
+                        float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
+                        float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (currentThick / 2.0f);
                         DrawCircleV((Vector2){basePos.x + randX, basePos.y + randY}, 0.5f, graphite);
                     }
                 }
@@ -150,8 +161,8 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
 
         }
     } else if (stroke->pointCount >= 2){
-        Vector2 p1 = {stroke->points[0].x, stroke->points[0].y + pageYOffset};
-        Vector2 p2 = {stroke->points[1].x, stroke->points[1].y + pageYOffset};
+        Vector2 p1 = {stroke->points[0].pos.x, stroke->points[0].pos.y + pageYOffset};
+        Vector2 p2 = {stroke->points[1].pos.x, stroke->points[1].pos.y + pageYOffset};
 
         if(stroke->type == BRUSH_LINE){
             DrawLineEx(p1, p2, stroke->thickness, stroke->color);
@@ -171,6 +182,7 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
         }
     }
 }
+/*
 void RenderStroke(Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
@@ -233,7 +245,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
         }
     }
 }
-
+*/
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     Color lineColor = (Color){200, 215, 230, 255};
     Color marginColor = (Color){255, 150, 150, 180};
