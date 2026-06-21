@@ -172,7 +172,7 @@ int main(void){
                     if((dist * dist) > 4.0f && hoveredPage == doc.activePage){
                         Vector2 smoothPoint = {
                             lastPoint.x + (mouseWorldPos.x - lastPoint.x) * 0.75f,
-                            lastPoint.y + (mouseWorldPos.y - lastPoint.y) * 0.75f
+                            lastPoint.y + (localMouseY - lastPoint.y) * 0.75f
                         };
                         AddPointToStroke(&currentStroke, smoothPoint, currentPressure);
                     }
