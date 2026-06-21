@@ -190,70 +190,7 @@ void RenderStroke(Stroke *stroke, float pageYOffset){
         }
     }
 }
-/*
-void RenderStroke(Stroke *stroke, float pageYOffset){
-    if(stroke->pointCount == 0) return;
-    if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
-        for(int j = 0;j < stroke->pointCount - 1; j++){
-            Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
-            Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
-            DrawLineEx(p1, p2, stroke->thickness, stroke->color);
-            DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
-        }
-        if(stroke->pointCount > 0){
-            Vector2 last = {stroke->points[stroke->pointCount - 1].x, stroke->points[stroke->pointCount - 1].y + pageYOffset};
-            DrawCircleV(last, stroke->thickness/2.0f, stroke->color);
-        }
-    }
-    else if (stroke->type == BRUSH_PENCIL){
-        Color graphite = stroke->color;
-        graphite.a = 100;
 
-        for(int j = 0; j< stroke->pointCount - 1; j++){
-            Vector2 p1 = {stroke->points[j].x, stroke->points[j].y + pageYOffset};
-            Vector2 p2 = {stroke->points[j+1].x, stroke->points[j+1].y + pageYOffset};
-
-            SetRandomSeed((unsigned int)(stroke->points[j].x * 1337 + stroke->points[j].y * 9999));
-
-            float dist = Vector2Distance(p1, p2);
-            Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
-
-            for(float d = 0; d < dist; d+= 1.0f){
-                Vector2 basePos = Vector2Add(p1, Vector2Scale(dir, d));
-
-                for(int k = 0; k <2 * stroke->thickness; k++){
-                    float randX = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
-                    float randY = ((float)GetRandomValue(-100, 100) / 100.0f) * (stroke->thickness / 2.0f);
-
-                    Vector2 speck = {basePos.x + randX, basePos.y + randY};
-                    DrawCircleV(speck, 0.5f, graphite);
-                }
-            }
-        }
-    }
-    else if (stroke->pointCount >= 2){
-        Vector2 p1 = {stroke->points[0].x, stroke->points[0].y + pageYOffset};
-        Vector2 p2 = {stroke->points[1].x, stroke->points[1].y + pageYOffset};
-
-        if(stroke->type == BRUSH_LINE){
-            DrawLineEx(p1, p2, stroke->thickness, stroke->color);
-            DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
-            DrawCircleV(p2, stroke->thickness / 2.0f, stroke->color);
-        }
-        else if(stroke->type == BRUSH_RECTANGLE){
-            float rx = fminf(p1.x, p2.x);
-            float ry = fminf(p1.y, p2.y);
-            float rw = fabsf(p1.x - p2.x);
-            float rh = fabsf(p1.y - p2.y);
-            DrawRectangleLinesEx((Rectangle){rx, ry, rw, rh}, stroke->thickness, stroke->color);
-        }
-        else if(stroke->type == BRUSH_CIRCLE){
-            float radius = Vector2Distance(p1, p2);
-            DrawRing(p1, radius - (stroke->thickness / 2.0f),radius + (stroke->thickness / 2.0f), 0,360, 64,stroke->color);
-        }
-    }
-}
-*/
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     Color lineColor = (Color){200, 215, 230, 255};
     Color marginColor = (Color){255, 150, 150, 180};
@@ -326,20 +263,6 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
             EndScissorMode();
         }
 
-        /*BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
-
-        Camera2D thumbCam = {0};
-        thumbCam.target = (Vector2){0,0};
-        thumbCam.offset = (Vector2){thumbRec.x, thumbRec.y};
-        thumbCam.zoom = thumbRec.width / (float)doc->pageWidth;
-
-        BeginMode2D(thumbCam);
-        for(int i = 0; i < layer->strokeCount;i++)
-            RenderStroke(&layer->strokes[i], 0);
-
-        EndMode2D();
-        EndScissorMode();
-        */
         DrawRectangleLinesEx(thumbRec, 1.0f, LIGHTGRAY);
 
         if(GUIButton((Rectangle){pX+155,lY+ 42, pW - 170,40}, TextFormat("Layer %d", l+1), aPage->activeLayer == l))
@@ -400,8 +323,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
                 RenderStroke(&layer->strokes[i], pageYOffset);
             }
         }
-        //for(int i = 0; i < layer->strokeCount; i++)
-        //RenderStroke(&layer->strokes[i], pageYOffset);
+
         if(doc->isDrawing && p == doc->activePage && l == page->activeLayer)
             RenderStroke(currentStroke, pageYOffset);
     }
