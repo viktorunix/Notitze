@@ -59,7 +59,7 @@ void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind
             const char *path = ShowOpenFileDialog();
             if(path) LoadDocumentBinary(path, doc);
         }
-        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer]);
+        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale);
         if(IsKeyPressed(settings->binds.keyDel) && settings->binds.keyDel != 0) DeleteActivePage(doc);
     }
 }
@@ -67,7 +67,7 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
 
     int boxW = 800;
-    int boxH = 400;
+    int boxH = 500;
     int boxX = (GetScreenWidth() - boxW)/2;
     int boxY =  (GetScreenHeight() - boxH)/2;
 
@@ -83,6 +83,25 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     if(GUIButton((Rectangle){col1X, boxY+180, 180, 40}, "Grid", doc->pattern == BG_GRID)) doc->pattern = BG_GRID;
     if(GUIButton((Rectangle){col1X, boxY+230, 180, 40}, "Dots", doc->pattern == BG_DOTS)) doc->pattern =BG_DOTS;
 
+    DrawText("Engine", boxX + 50, boxY + 300, 25, WHITE);
+    int engineY = boxY + 340;
+    if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->useBakedRendering ? "Mode: Baked" : "Mode: Live", doc->useBakedRendering))
+        doc->useBakedRendering = !doc->useBakedRendering;
+    engineY +=50;
+    DrawText("Bake Scale", col1X, engineY + 10, 20, LIGHTGRAY);
+    if(GUIButton((Rectangle) {col1X + 110, engineY, 30, 40}, "-", false)){
+        if(doc->renderScale > 1.0f){
+            doc->renderScale -=1.0f;
+            RebakeAllLayers(doc);
+        }
+    }
+    DrawText(TextFormat("%.1f", doc->renderScale), col1X + 145, engineY + 10, 20, WHITE );
+    if(GUIButton((Rectangle){col1X + 185, engineY, 30, 40}, "+", false)){
+        if(doc->renderScale < 4.0f){
+            doc->renderScale +=1.0f;
+            RebakeAllLayers(doc);
+        }
+    }
     DrawText("KEY", boxX + 320, boxY + 30, 20, WHITE);
     int col2X = boxX + 250;
     int currentY = boxY + 80;
@@ -229,7 +248,7 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
         if(path) LoadDocumentBinary(path, doc);
     }
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer]);
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale);
     curX +=80 + gap;
     if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Delete", false)) DeleteActivePage(doc);
     curX += 80 + gap;

@@ -18,7 +18,7 @@ void AddStrokeToLayer(Layer *layer, Stroke stroke){
     layer->strokes[layer->strokeCount++] = stroke;
 }
 
-void AddLayerToPage(Page *page, float width, float height){
+void AddLayerToPage(Page *page, float width, float height, float renderScale){
     if(page->layerCount >= page->layerCapacity){
         page->layerCapacity = page->layerCapacity == 0 ? 4 : page->layerCapacity * 2;
         page->layers = (Layer *)realloc(page->layers, page->layerCapacity * sizeof(Layer));
@@ -26,13 +26,13 @@ void AddLayerToPage(Page *page, float width, float height){
     page->layers[page->layerCount] = (Layer){0};
     page->layers[page->layerCount].isVisible = true;
 
-    page->layers[page->layerCount].texture = LoadRenderTexture((int)width * RENDER_SCALE, (int)height * RENDER_SCALE);
+    page->layers[page->layerCount].texture = LoadRenderTexture((int)width * renderScale, (int)height * renderScale);
     SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
     BeginTextureMode(page->layers[page->layerCount].texture);
     ClearBackground(BLANK);
     EndTextureMode();
 
-    
+
     page->activeLayer = page->layerCount;
     page->layerCount++;
 }
@@ -43,7 +43,7 @@ void AddPageToDocument(Document *doc){
         doc->pages = (Page *)realloc(doc->pages, doc->pageCapacity  * sizeof(Page));
     }
     doc->pages[doc->pageCount] = (Page){0};
-    AddLayerToPage(&doc->pages[doc->pageCount], doc->pageWidth, doc->pageHeight);
+    AddLayerToPage(&doc->pages[doc->pageCount], doc->pageWidth, doc->pageHeight, doc->renderScale);
     doc->activePage = doc->pageCount;
     doc->pageCount++;
 }

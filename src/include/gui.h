@@ -11,5 +11,6 @@ void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue);
 void RenderStroke(Stroke *stroke, float pageYOffset);
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
+void RebakeAllLayers(Document *doc);
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset);
 #endif

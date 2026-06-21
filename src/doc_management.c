@@ -18,7 +18,7 @@ void MoveActivePageDown(Document *doc){
     }
 }
 
-void UndoLastStrokes(Layer *layer){
+void UndoLastStrokes(Layer *layer, float renderScale){
     if(layer->strokeCount > 0 ){
         layer->strokeCount--;
         free(layer->strokes[layer->strokeCount].points);
@@ -29,7 +29,7 @@ void UndoLastStrokes(Layer *layer){
         BeginTextureMode(layer->texture);
         ClearBackground(BLANK);
         Camera2D bakeCam = {0};
-        bakeCam.zoom = RENDER_SCALE;
+        bakeCam.zoom = renderScale;
         BeginMode2D(bakeCam);
         for(int i = 0; i < layer->strokeCount; i++)
             RenderStroke(&layer->strokes[i], 0);
@@ -45,19 +45,21 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
         Layer *activeLayer = &doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer];
 
         AddStrokeToLayer(activeLayer, *currentStroke);
+        if(doc->useBakedRendering){
+            BeginTextureMode(activeLayer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = doc->renderScale;
+            BeginMode2D(bakeCam);
+            for(int i = 0; i < activeLayer->strokeCount; i++){
+                RenderStroke(&activeLayer->strokes[i], 0);
+            }
 
-        BeginTextureMode(activeLayer->texture);
-        ClearBackground(BLANK);
-        Camera2D bakeCam = {0};
-        bakeCam.zoom = RENDER_SCALE;
-        BeginMode2D(bakeCam);
-        for(int i = 0; i < activeLayer->strokeCount; i++){
-            RenderStroke(&activeLayer->strokes[i], 0);
+            EndMode2D();
+            EndTextureMode();
         }
-        
-        EndMode2D();
-        EndTextureMode();
     } else{
+        
         free(currentStroke->points);
     }
     *currentStroke = (Stroke){0};

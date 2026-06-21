@@ -25,6 +25,8 @@ int main(void){
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
     Document doc = {0};
+    doc.renderScale = 2.0f;
+    doc.useBakedRendering = true;
     //AddPageToDocument(&doc);
     doc.enableLayers = false;
     doc.pattern = BG_BLANK;
