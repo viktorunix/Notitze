@@ -69,7 +69,7 @@ Color Premultiply(Color c){
 void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
     if(stroke->pointCount == 0) return;
     Color pColor = Premultiply(stroke->color);
-    if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
+    if(stroke->type == BRUSH_PEN ){
         if(stroke->pointCount < 3){
             for(int j = 0; j < stroke->pointCount - 1; j++){
                 Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
@@ -120,6 +120,67 @@ void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled){
             float endThick = stroke->thickness * endPressure;
             endThick = fmaxf(endThick, 0.5f);
             DrawCircleV(last, endThick/ 2.0f, pColor);
+        }
+    }else if (stroke->type == BRUSH_HIGHLIGHTER){
+        Color hColor = stroke->color;
+        hColor.a = 100;
+        Color mColor = Premultiply(hColor);
+
+        float dx = cosf(PI / 4.0f) * (stroke->thickness / 2.0f);
+        float dy = sinf(PI / 4.0f) * (stroke->thickness / 2.0f);
+
+        if(stroke->pointCount  < 3){
+            for(int j = 0; j < stroke->pointCount - 1; j++){
+                Vector2 p1 = {stroke->points[j].pos.x, stroke->points[j].pos.y + pageYOffset};
+                Vector2 p2 = {stroke->points[j + 1].pos.x, stroke->points[j+1].pos.y + pageYOffset};
+
+                Vector2 o1 = {p1.x - dx, p1.y + dy};
+                Vector2 o2 = {p1.x + dx, p1.y - dy};
+
+                Vector2 n1 = {p2.x - dx, p2.y + dy};
+                Vector2 n2 = {p2.x + dx, p2.y - dy};
+
+                DrawTriangle(o1, o2, n1, mColor);
+                DrawTriangle(o2, n2, n1, mColor);
+                DrawTriangle(o1, n1, o2, mColor);
+                DrawTriangle(o2, n1, n2, mColor);
+            }
+        } else {
+            for( int j = 0; j < stroke->pointCount - 1; j++){
+                StrokePoint p0 = (j == 0) ? stroke->points[0] : stroke->points[j - 1];
+                StrokePoint p1 = stroke->points[j];
+                StrokePoint p2 = stroke->points[j + 1];
+                StrokePoint p3 = (j + 2 < stroke->pointCount) ? stroke->points[ j + 2] : p2;
+
+                p0.pos.y += pageYOffset;
+                p1.pos.y += pageYOffset;
+                p2.pos.y += pageYOffset;
+                p3.pos.y += pageYOffset;
+
+                int segments = (int)(Vector2Distance(p1.pos, p2.pos) / 2.0f);
+                if(segments < 2) segments = 2;
+
+                Vector2 lastP = p1.pos;
+
+                for(int i = 1; i <= segments; i++){
+                    float t = (float) i / (float) segments;
+                    Vector2 nextP = CalculateSplinePoint(p0.pos, p1.pos, p2.pos, p3.pos, t);
+                    Vector2 o1 = {lastP.x - dx, lastP.y + dy};
+                    Vector2 o2 = {lastP.x + dx, lastP.y - dy};
+
+                    Vector2 n1 = {nextP.x - dx, nextP.y + dy};
+                    Vector2 n2 = {nextP.x + dx, nextP.y - dy};
+
+                    DrawTriangle(o1, o2, n1, mColor);
+                    DrawTriangle(o2, n2, n1, mColor);
+
+                    DrawTriangle(o1,n1,o2, mColor);
+                    DrawTriangle(o2, n1, n2, mColor);
+
+                    lastP = nextP;
+
+                }
+            }
         }
     }
     else if (stroke->type == BRUSH_PENCIL){
