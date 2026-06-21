@@ -7,7 +7,7 @@
 #define UI_HEIGHT 160
 bool GUIButton (Rectangle bounds, const char *text, bool isActive);
 void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue);
-void newRenderStroke(Stroke *stroke, float pageYOffset);
+//void newRenderStroke(Stroke *stroke, float pageYOffset);
 void RenderStroke(Stroke *stroke, float pageYOffset);
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc);

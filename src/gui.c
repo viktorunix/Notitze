@@ -56,7 +56,7 @@ Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, flo
         0.5f * ((2.0f * p1.y) + (-p0.y + p2.y) * t + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 + (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3)
     };
 }
-void newRenderStroke(Stroke *stroke, float pageYOffset){
+void RenderStroke(Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
     if(stroke->type == BRUSH_PEN || stroke->type == BRUSH_HIGHLIGHTER){
         if(stroke->pointCount < 3){
@@ -97,6 +97,10 @@ void newRenderStroke(Stroke *stroke, float pageYOffset){
                     lastP = nextP;
                 }
             }
+        }
+        if(stroke->pointCount > 0){
+            Vector2 last = {stroke->points[stroke->pointCount - 1].pos.x, stroke->points[stroke->pointCount-1].pos.y + pageYOffset};
+            DrawCircleV(last, (stroke->thickness * stroke->points[stroke->pointCount - 1].pressure)/ 2.0f, stroke->color);
         }
     }
     else if (stroke->type == BRUSH_PENCIL){

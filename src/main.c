@@ -67,6 +67,8 @@ int main(void){
     int barY = 20;
     //LoadSettings(&settings);
 
+
+    float currentPressure = 1.0f;
     bool isStartup = true;
     while(!WindowShouldClose()){
         if(isStartup){
@@ -126,12 +128,12 @@ int main(void){
                     Layer *activeLayer = &doc.pages[hoveredPage].layers[doc.pages[hoveredPage].activeLayer];
                     if(activeLayer->isVisible){
                         doc.isDrawing = true;
-
+                        currentPressure = 1.0f;
                         currentStroke = (Stroke){0};
                         currentStroke.type = doc.activeBrush;
                         currentStroke.color = pallete[settings.selectedColorIndex];
                         currentStroke.thickness = settings.currentBrushThickness;
-                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY}, currentPressure);
                     }
                 }
             } else{
@@ -155,14 +157,24 @@ int main(void){
         } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
             if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
-                    Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1];
-                    float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
-                    if(distSq > 4.0f && hoveredPage == doc.activePage){
+                    Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
+                    //float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
+                    float dist = Vector2Distance(mouseWorldPos, lastPoint);
+                    
+
+                    //if moving >30px/frame, pressure drops to 0.1f
+                    float targetPressure = 1.0f - (dist / 30.0f);
+                    if(targetPressure < 0.1f) targetPressure = 0.1f;
+                    if(targetPressure > 1.0f) targetPressure = 1.0f;
+
+                    currentPressure = (currentPressure * 0.7f) + (targetPressure * 0.3f);
+
+                    if((dist * dist) > 4.0f && hoveredPage == doc.activePage){
                         Vector2 smoothPoint = {
                             lastPoint.x + (mouseWorldPos.x - lastPoint.x) * 0.75f,
                             lastPoint.y + (mouseWorldPos.y - lastPoint.y) * 0.75f
                         };
-                        AddPointToStroke(&currentStroke, smoothPoint);
+                        AddPointToStroke(&currentStroke, smoothPoint, currentPressure);
                     }
                 }
                 if(!isMouseInsideCanvas){
@@ -172,9 +184,9 @@ int main(void){
             } else {
                 //shapes
                 if(currentStroke.pointCount == 1){
-                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY});
+                    AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY},1.0f);
                 } else if (currentStroke.pointCount == 2){
-                    currentStroke.points[1] = (Vector2){mouseWorldPos.x, localMouseY};
+                    currentStroke.points[1].pos = (Vector2){mouseWorldPos.x, localMouseY};
                 }
             }
         } else if(isPanning){
@@ -224,7 +236,7 @@ int main(void){
                 Layer *layer = &page->layers[l];
                 if(!layer->isVisible) continue;
                 for(int i = 0; i < layer->strokeCount; i++)
-                    newRenderStroke(&layer->strokes[i], floatY);
+                    RenderStroke(&layer->strokes[i], floatY);
             }
         }
 

@@ -7,6 +7,7 @@ void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure){
     }
     stroke->points[stroke->pointCount].pos = point;
     stroke->points[stroke->pointCount].pressure = pressure;
+    stroke->pointCount++;
 }
 
 void AddStrokeToLayer(Layer *layer, Stroke stroke){
