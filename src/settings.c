@@ -59,7 +59,7 @@ void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind
             const char *path = ShowOpenFileDialog();
             if(path) LoadDocumentBinary(path, doc);
         }
-        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale, doc->pressureEnabled,doc->brushTex);
+        if(IsKeyPressed(settings->binds.keyUndo) && settings->binds.keyUndo != 0) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale, doc->pressureEnabled,*doc);
         if(IsKeyPressed(settings->binds.keyDel) && settings->binds.keyDel != 0) DeleteActivePage(doc);
     }
 }
@@ -253,7 +253,7 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
         if(path) LoadDocumentBinary(path, doc);
     }
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale,doc->pressureEnabled, doc->brushTex);
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoLastStrokes(&doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer], doc->renderScale,doc->pressureEnabled, *doc);
     curX +=80 + gap;
     if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Delete", false)) DeleteActivePage(doc);
     curX += 80 + gap;

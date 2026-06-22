@@ -8,7 +8,7 @@
 bool GUIButton (Rectangle bounds, const char *text, bool isActive);
 void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue);
 //void newRenderStroke(Stroke *stroke, float pageYOffset);
-void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled, Texture2D brushTex);
+void RenderStroke(Stroke *stroke, float pageYOffset, bool pressureEnabled, Document doc);
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);

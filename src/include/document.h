@@ -61,5 +61,6 @@ typedef struct {
     bool pressureEnabled;
 
     Texture2D brushTex;
+    Texture2D pencilTex;
 } Document;
 #endif

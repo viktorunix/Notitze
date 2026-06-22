@@ -95,6 +95,29 @@ int main(void){
     UnloadImage(brushImage);
     SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
     doc.brushTex = softBrushTex;
+
+
+    Image pencilImage = GenImageColor(256,256, BLANK);
+    for(int y = 0; y < 256;y++){
+        for(int x = 0; x < 256; x++){
+            float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
+            if(dist <= 128.0f){
+                float randVal = (float)GetRandomValue(0,100) / 100.0f;
+                float falloff = 1.0f - (dist / 128.0f);
+                float density = falloff * falloff;
+
+                if(randVal < density){
+                    Color c = WHITE;
+                    c.a = (unsigned char)(GetRandomValue(100, 255) * falloff);
+                    ImageDrawPixel(&pencilImage, x, y ,c);
+                }
+            }
+        }
+    }
+    Texture2D pencilTexture = LoadTextureFromImage(pencilImage);
+    UnloadImage(pencilImage);
+    SetTextureFilter(pencilTexture, TEXTURE_FILTER_POINT);
+    doc.pencilTex = pencilTexture;
     while(!WindowShouldClose()){
 
         
