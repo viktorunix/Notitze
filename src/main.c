@@ -11,24 +11,25 @@
 #include "include/gui.h"
 #include "include/settings.h"
 #include "include/panels.h"
+#include "include/brush_system.h"
 //#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
-float DistancePointSegment(Vector2 p, Vector2 a, Vector2 b){
-    Vector2 ab = Vector2Subtract(b, a);
-    Vector2 ap = Vector2Subtract(p, a);
+Stroke currentStroke = {0};
+Color currentBrushColor = BLACK;
+float currentBrushThickness = 3.0f;
 
-    float dotAB = Vector2DotProduct(ab, ab);
-    if(dotAB == 0.0f) return Vector2Distance(p, a);
-
-    float t = Vector2DotProduct(ap, ab) / dotAB;
-    t = fmaxf(0.0f, fminf(1.0f, t));
-
-    Vector2 proj = Vector2Add(a, Vector2Scale(ab, t));
-    return Vector2Distance(p, proj);
-}
 int main(void){
+    InitBrushSystem();
+    RegisterBrush(CreatePenBrush());
+    RegisterBrush(CreatePencilBrush());
+    RegisterBrush(CreateHighlighterBrush());
+    RegisterBrush(CreateLineBrush());
+    RegisterBrush(CreateRectangleBrush());
+    RegisterBrush(CreateCircleBrush());
+    RegisterBrush(CreateEraserBrush());
+
     const int screenWidth = 1400;
     const int screenHeight = 900;
    
@@ -47,7 +48,7 @@ int main(void){
     doc.ppi = START_PPI;
     doc.pageWidth = CUSTOM_W;
     doc.pageHeight = CUSTOM_H;
-    Stroke currentStroke = {0};
+
 
     doc.isDrawing = false;
     bool isPanning = false;
@@ -55,7 +56,6 @@ int main(void){
     float dragOffsetY = 0.0f;
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
 
-    Color currentBrushColor = BLACK;
 
 
     Settings settings = {0};
@@ -160,6 +160,10 @@ int main(void){
         if(mousePos.y < UI_HEIGHT && !settings.showSettings){
             guiClicked = true;
         }
+
+        currentBrushColor = pallete[settings.selectedColorIndex];
+        currentBrushThickness = settings.currentBrushThickness;
+        SetActiveBrush(doc.activeBrush);
         
         // camera zoom
         float wheel = GetMouseWheelMove();
@@ -175,34 +179,27 @@ int main(void){
         int hoveredPage = (int)(mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
         if(mouseWorldPos.y < 0) hoveredPage = -1;
         float localMouseY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
+        Vector2 localMousePos = {mouseWorldPos.x, localMouseY};
+
+        bool isMouseInsideCanvas = (hoveredPage >= 0 && hoveredPage < doc.pageCount &&
+                                    localMousePos.x >= 0 && localMousePos.x <= doc.pageWidth &&
+                                    localMouseY >= 0 && localMouseY <= doc.pageHeight);
 
 
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked){
-            if(doc.activeBrush == BRUSH_HIGHLIGHTER)
-                pallete[settings.selectedColorIndex].a = 150;
-            else
-                pallete[settings.selectedColorIndex].a = 255;
-            if(hoveredPage >= 0 && hoveredPage < doc.pageCount && mouseWorldPos.x >= 0 && mouseWorldPos.x <= doc.pageWidth){
+            if(isMouseInsideCanvas){
                 doc.activePage = hoveredPage;
-
                 if(localMouseY <= 40){
                     draggedPage = hoveredPage;
                     dragOffsetY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
                 } else{
-                    Layer *activeLayer = &doc.pages[hoveredPage].layers[doc.pages[hoveredPage].activeLayer];
-                    if(activeLayer->isVisible){
-                        doc.isDrawing = true;
-                        currentPressure = 1.0f;
-                        currentStroke = (Stroke){0};
-                        currentStroke.type = doc.activeBrush;
-                        currentStroke.color = pallete[settings.selectedColorIndex];
-                        currentStroke.thickness = settings.currentBrushThickness;
-                        AddPointToStroke(&currentStroke, (Vector2){mouseWorldPos.x, localMouseY}, currentPressure);
-                    }
+                    currentPressure = 1.0f;
+                    GetActiveBrush()->OnPress(&doc, localMousePos, currentPressure);
                 }
             } else{
                 isPanning = true;
             }
+            
         }
         
         if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
@@ -210,12 +207,7 @@ int main(void){
         }
         
 
-        Vector2 localMousePos = {mouseWorldPos.x, localMouseY};
-
-        bool isMouseInsideCanvas = (hoveredPage >= 0 && hoveredPage < doc.pageCount &&
-                                    localMousePos.x >= 0 && localMousePos.x <= doc.pageWidth &&
-                                    localMouseY >= 0 && localMouseY <= doc.pageHeight);
-
+       
         if(draggedPage != -1){
 
         } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -226,95 +218,27 @@ int main(void){
             float clampedY = localMouseY;
             if(clampedY < 40.0f) clampedY = 40.0f;
             if(clampedY > doc.pageHeight) clampedY = doc.pageHeight;
-            if(doc.activeBrush == BRUSH_ERASER){
-                float eraserRadius = settings.currentBrushThickness * 2.0f;
-                Vector2 localMousePos = {clampedX, clampedY};
-                Layer *activeLayer = &doc.pages[doc.activePage].layers[doc.pages[doc.activePage].activeLayer];
-                bool layerNeedsRebake = false;
+            Vector2 clampedPos = {clampedX, clampedY};
 
-                for(int i = activeLayer->strokeCount - 1; i >=0; i--){
-                    Stroke *s = &activeLayer->strokes[i];
-                    bool hit = false;
-                    float hitThreshold = (s->thickness / 2.0f) + eraserRadius;
-
-                    if(s->type == BRUSH_CIRCLE){
-                        float radius = Vector2Distance(s->points[0].pos, s->points[1].pos);
-                        float distToCenter = Vector2Distance(localMousePos, s->points[0].pos);
-                        if(fabsf(distToCenter - radius) <= hitThreshold) hit = true;
-                    }
-                    else if (s->type == BRUSH_RECTANGLE) {
-                        Vector2 p1 = s->points[0].pos;
-                        Vector2 p2 = s->points[1].pos;
-                        Vector2 tr = {p2.x, p1.y};
-                        Vector2 bl = {p1.x, p2.y};
-                        if (DistancePointSegment(localMousePos, p1, tr) <= hitThreshold ||
-                            DistancePointSegment(localMousePos, tr, p2) <= hitThreshold ||
-                            DistancePointSegment(localMousePos, p2, bl) <= hitThreshold ||
-                            DistancePointSegment(localMousePos, bl, p1) <= hitThreshold) hit = true;
-                    } 
-                    else if (s->pointCount >= 2) {
-                        for (int j = 0; j < s->pointCount - 1; j++) {
-                            if (DistancePointSegment(localMousePos, s->points[j].pos, s->points[j+1].pos) <= hitThreshold) {
-                                hit = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (hit) {
-                        RemoveStrokeFromLayer(activeLayer, i);
-                        layerNeedsRebake = true;
-                    }
-
-                }
-                if (layerNeedsRebake && doc.useBakedRendering) {
-                    BeginTextureMode(activeLayer->texture);
-                    ClearBackground(BLANK);
-                    Camera2D bakeCam = {0};
-                    bakeCam.zoom = doc.renderScale;
-                    BeginMode2D(bakeCam);
-                    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-                    for(int s = 0; s < activeLayer->strokeCount; s++) {
-                        RenderStroke(doc, &activeLayer->strokes[s], 0);
-                    }
-                    EndBlendMode();
-                    EndMode2D();
-                    EndTextureMode();
-                }
+            if(doc.activeBrush <=BRUSH_PENCIL && currentStroke.pointCount > 0){
+                float dist = Vector2Distance(mouseWorldPos, currentStroke.points[currentStroke.pointCount - 1].pos);
+                float targetPressure = 1.0f -(dist / 30.0f);
+                if(targetPressure < 0.1f) targetPressure = 0.1f;
+                if(targetPressure > 1.0f) targetPressure = 1.0f;
+                currentPressure = (currentPressure * 0.7f) + (targetPressure * 0.3f);
             }
-            else if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
-                if(currentStroke.pointCount > 0){
-                    Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
-                    //float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
-                    float dist = Vector2Distance(mouseWorldPos, lastPoint);
-                    
+            GetActiveBrush()->OnDrag(&doc, clampedPos, currentPressure);
 
-                    //if moving >30px/frame, pressure drops to 0.1f
-                    float targetPressure = 1.0f - (dist / 30.0f);
-                    if(targetPressure < 0.1f) targetPressure = 0.1f;
-                    if(targetPressure > 1.0f) targetPressure = 1.0f;
-
-                    currentPressure = (currentPressure * 0.7f) + (targetPressure * 0.3f);
-
-                    if((dist * dist) > 4.0f && hoveredPage == doc.activePage){
-                        Vector2 smoothPoint = {
-                            lastPoint.x + (mouseWorldPos.x - lastPoint.x) * 0.75f,
-                            lastPoint.y + (localMouseY - lastPoint.y) * 0.75f
-                        };
-                        AddPointToStroke(&currentStroke, smoothPoint, currentPressure);
-                    }
-                }
-                if(!isMouseInsideCanvas){
-                    FinishStroke(&currentStroke, &doc);
-                }
-            } else {
-                //shapes
-                if(currentStroke.pointCount == 1){
-                    AddPointToStroke(&currentStroke, (Vector2){clampedX, clampedY},1.0f);
-                } else if (currentStroke.pointCount == 2){
-                    currentStroke.points[1].pos = (Vector2){clampedX, clampedY};
-                }
+            if(!isMouseInsideCanvas){
+                GetActiveBrush()->OnRelease(&doc, clampedPos);
             }
         } else if(isPanning){
+            Vector2 delta = GetMouseDelta();
+            camera.offset.x += delta.x;
+            camera.offset.y += delta.y;
+        }
+            
+         else if(isPanning){
             Vector2 delta = GetMouseDelta();
             camera.offset.x += delta.x;
             camera.offset.y += delta.y;
@@ -327,8 +251,7 @@ int main(void){
                draggedPage = -1;
             }
             if(doc.isDrawing){
-                doc.isDrawing = false;
-                FinishStroke(&currentStroke, &doc);
+                GetActiveBrush()->OnRelease(&doc, localMousePos);
             }
             isPanning = false;
         }
@@ -368,11 +291,11 @@ int main(void){
                 EndBlendMode();
             }
         }
-
-        if(doc.activeBrush == BRUSH_ERASER){
-            float eraserRadius = settings.currentBrushThickness * 2.0f;
-            DrawCircleLines(mouseWorldPos.x, mouseWorldPos.y, eraserRadius, RED);
+        if(!guiClicked && isMouseInsideCanvas){
+            GetActiveBrush()->RenderPreview(&doc, localMousePos, settings.currentBrushThickness);
         }
+
+        
         EndMode2D();
         GUIHeaderDock(&doc, &settings, mousePos);
         // layer panel

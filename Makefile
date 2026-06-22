@@ -3,9 +3,9 @@ CFLAGS = -g  -I src/include -xc -std=c11
 LDFLAGS = -L src/lib
 LIBS = -l:raylib.dll -lopengl32 -lgdi32 -lwinmm -lcomdlg32
 
-SRC = $(wildcard src/*.c)
-OBJ = $(patsubst src/%.c, build/%.o, $(SRC))
-TARGET = notes.exe
+SRC = $(wildcard src/*.c) $(wildcard src/tools/*.c)
+OBJ = $(patsubst src/%.c, build/%.o, $(patsubst src/tools/%.c, build/tools/%.o, $(SRC)))
+TARGET = notitze.exe
 BIN_DIR = build\bin
 BIN_TARGET = $(BIN_DIR)/$(TARGET)
 
@@ -22,6 +22,10 @@ $(BIN_TARGET): $(OBJ)
 
 build/%.o: src/%.c
 	@cmd /C "if not exist build mkdir build"
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/tools/%.o: src/tools/%.c
+	@cmd /C "if not exist build\tools mkdir build\tools"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
