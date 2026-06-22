@@ -13,6 +13,8 @@
 #include "include/panels.h"
 #include "include/brush_system.h"
 #include "include/command_system.h"
+#include "include/renderer.h"
+#include "include/viewport.h"
 //#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
@@ -50,12 +52,13 @@ int main(void){
     doc.ppi = START_PPI;
     doc.pageWidth = CUSTOM_W;
     doc.pageHeight = CUSTOM_H;
-
-
     doc.isDrawing = false;
-    bool isPanning = false;
-    int draggedPage = -1;
-    float dragOffsetY = 0.0f;
+
+    int draggedPage=  -1;
+    float dragOffsetY= 0.0f;
+    Viewport vp = {0};
+    InitViewport(&vp, doc.pageWidth);
+
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
 
 
@@ -87,58 +90,12 @@ int main(void){
     float currentPressure = 1.0f;
     bool isStartup = true;
 
-    //brush circle texture
-    //Image brushImage = GenImageGradientRadial(64,64,0.0f, WHITE, BLANK);
-    Image brushImage = GenImageColor(256,256, BLANK);
-    for(int y = 0; y <256; y++){
-        for(int x = 0; x < 256; x++){
-            float dist = Vector2Distance((Vector2){x + 0.5f, y+0.5f}, (Vector2){128.0f, 128.0f});
-
-            if(dist <=126.0f){
-                ImageDrawPixel(&brushImage, x, y, WHITE);
-
-            }else if(dist <= 128.0f){
-                float alpha = (128.0f - dist) / 2.0f;
-                unsigned char aVal = (unsigned char) (alpha *255.0f);
-
-                Color c = {aVal, aVal, aVal, aVal};
-                //c.a = (unsigned char)(alpha * 255.0f);
-                ImageDrawPixel(&brushImage, x, y, c);
-            }
-        }
-    }
-    Texture2D softBrushTex = LoadTextureFromImage(brushImage);
-    UnloadImage(brushImage);
-    SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
-    doc.brushTex = softBrushTex;
-
-
-    Image pencilImage = GenImageColor(256,256, BLANK);
-    for(int y = 0; y < 256;y +=2){
-        for(int x = 0; x < 256; x+=2){
-            float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
-            if(dist <= 128.0f){
-                float randVal = (float)GetRandomValue(0,100) / 100.0f;
-                float falloff = 1.0f - (dist / 128.0f);
-                float density = falloff * falloff;
-
-                if(randVal < density){
-                    //Color c = WHITE;
-                    //c.a = (unsigned char)(GetRandomValue(100, 255) * falloff);
-                    ImageDrawPixel(&pencilImage, x, y ,WHITE);
-                }
-            }
-        }
-    }
-    Texture2D pencilTexture = LoadTextureFromImage(pencilImage);
-    UnloadImage(pencilImage);
-    SetTextureFilter(pencilTexture, TEXTURE_FILTER_POINT);
-    doc.pencilTex = pencilTexture;
+    InitRenderer(&doc);
     while(!WindowShouldClose()){
 
         
         if(isStartup){
-            isStartup = startUpWindow(&doc,&camera);
+            isStartup = startUpWindow(&doc,&vp.camera);
             continue;
         }
         Vector2 mousePos = GetMousePosition();
@@ -167,45 +124,26 @@ int main(void){
         currentBrushThickness = settings.currentBrushThickness;
         SetActiveBrush(doc.activeBrush);
         
-        // camera zoom
-        float wheel = GetMouseWheelMove();
-        if(wheel != 0 && !guiClicked){
-            camera.offset = mousePos;
-            camera.target = mouseWorldPos;
-            camera.zoom += (wheel * 0.125f);
-            if(camera.zoom < 0.25f) camera.zoom = 0.25f;
-            if(camera.zoom > 5.0f) camera.zoom = 5.0f;
-        }
-
-        //drag, drom and drawing
-        int hoveredPage = (int)(mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
-        if(mouseWorldPos.y < 0) hoveredPage = -1;
-        float localMouseY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
-        Vector2 localMousePos = {mouseWorldPos.x, localMouseY};
-
-        bool isMouseInsideCanvas = (hoveredPage >= 0 && hoveredPage < doc.pageCount &&
-                                    localMousePos.x >= 0 && localMousePos.x <= doc.pageWidth &&
-                                    localMouseY >= 0 && localMouseY <= doc.pageHeight);
-
-
+        UpdateViewportMath(&vp, &doc, mousePos, guiClicked);
+        
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked){
-            if(isMouseInsideCanvas){
-                doc.activePage = hoveredPage;
-                if(localMouseY <= 40){
-                    draggedPage = hoveredPage;
-                    dragOffsetY = mouseWorldPos.y - (hoveredPage * (doc.pageHeight + PAGE_GAP));
+            if(vp.isMouseInsideCanvas){
+                doc.activePage = vp.hoveredPage;
+                if(vp.localMousePos.y <= 40){
+                    draggedPage = vp.hoveredPage;
+                    dragOffsetY = vp.mouseWorldPos.y - (vp.hoveredPage * (doc.pageHeight + PAGE_GAP));
                 } else{
                     currentPressure = 1.0f;
-                    GetActiveBrush()->OnPress(&doc, localMousePos, currentPressure);
+                    GetActiveBrush()->OnPress(&doc, vp.localMousePos, currentPressure);
                 }
             } else{
-                isPanning = true;
+                vp.isPanning = true;
             }
             
         }
         
         if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-            isPanning = true;
+            vp.isPanning = true;
         }
         
 
@@ -213,17 +151,17 @@ int main(void){
         if(draggedPage != -1){
 
         } else if(doc.isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            float clampedX = mouseWorldPos.x;
+            float clampedX = vp.mouseWorldPos.x;
             if(clampedX < 0.0f) clampedX = 0.0f;
             if(clampedX > doc.pageWidth) clampedX = doc.pageWidth;
 
-            float clampedY = localMouseY;
+            float clampedY = vp.localMousePos.y;
             if(clampedY < 40.0f) clampedY = 40.0f;
             if(clampedY > doc.pageHeight) clampedY = doc.pageHeight;
             Vector2 clampedPos = {clampedX, clampedY};
 
             if(doc.activeBrush <=BRUSH_PENCIL && currentStroke.pointCount > 0){
-                float dist = Vector2Distance(mouseWorldPos, currentStroke.points[currentStroke.pointCount - 1].pos);
+                float dist = Vector2Distance(vp.mouseWorldPos, currentStroke.points[currentStroke.pointCount - 1].pos);
                 float targetPressure = 1.0f -(dist / 30.0f);
                 if(targetPressure < 0.1f) targetPressure = 0.1f;
                 if(targetPressure > 1.0f) targetPressure = 1.0f;
@@ -231,85 +169,33 @@ int main(void){
             }
             GetActiveBrush()->OnDrag(&doc, clampedPos, currentPressure);
 
-            if(!isMouseInsideCanvas){
+            if(!vp.isMouseInsideCanvas){
                 GetActiveBrush()->OnRelease(&doc, clampedPos);
             }
-        } else if(isPanning){
-            Vector2 delta = GetMouseDelta();
-            camera.offset.x += delta.x;
-            camera.offset.y += delta.y;
+        } else if(vp.isPanning){
+            ApplyPanning(&vp);
         }
-            
-         else if(isPanning){
-            Vector2 delta = GetMouseDelta();
-            camera.offset.x += delta.x;
-            camera.offset.y += delta.y;
-        }
+
         
         if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)){
             if(draggedPage != -1){
-               int dropIndex = (int)(mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
+               int dropIndex = (int)(vp.mouseWorldPos.y / (doc.pageHeight + PAGE_GAP));
                MovePageToIndex(&doc, draggedPage, dropIndex);
                draggedPage = -1;
             }
             if(doc.isDrawing){
-                GetActiveBrush()->OnRelease(&doc, localMousePos);
+                GetActiveBrush()->OnRelease(&doc, vp.localMousePos);
             }
-            isPanning = false;
+            vp.isPanning = false;
         }
         
 
  
 
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
 
-        BeginMode2D(camera);
-        for(int p = 0; p< doc.pageCount; p++){
-
-            if(p == draggedPage) continue;
-            float pageYOffset = p * (doc.pageHeight + PAGE_GAP);
-            GUIPage(&doc, &currentStroke, p, pageYOffset);
-            
-        }
-        // dragged page preview
-        
-        if(draggedPage != -1){
-            float floatY = mouseWorldPos.y - dragOffsetY;
-            DrawRectangle(15, floatY + 15, doc.pageWidth, doc.pageHeight, (Color){0,0,0,100});
-            DrawRectangle(0, floatY, doc.pageWidth, doc.pageHeight, RAYWHITE);
-            DrawPageBackground(&doc, doc.pattern, floatY);
-            DrawRectangle(0, floatY, doc.pageWidth, 40, SKYBLUE);
-
-            Page *page = &doc.pages[draggedPage];
-            for(int l = 0; l < page->layerCount; l++){
-                Layer *layer = &page->layers[l];
-                if(!layer->isVisible || layer->texture.id == 0) continue;
-
-                Rectangle source = {0, 0, (float) layer->texture.texture.width, -(float)layer->texture.texture.height};
-                Rectangle destination = {0, floatY, doc.pageWidth, doc.pageHeight};
-                BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-                DrawTexturePro(layer->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
-                EndBlendMode();
-            }
-        }
-        if(!guiClicked && isMouseInsideCanvas){
-            GetActiveBrush()->RenderPreview(&doc, localMousePos, settings.currentBrushThickness);
-        }
-
-        
-        EndMode2D();
-        GUIHeaderDock(&doc, &settings, mousePos);
-        // layer panel
-        if(doc.enableLayers && !settings.showSettings){
-            GUILayerPanel(&doc, currentStroke);
-        }
-        // settings page
-        if(settings.showSettings){
-            SettingsPage(&doc, &settings, &listeningForBind);
-
-        }
-        EndDrawing();
+    RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY, 
+                      mousePos, vp.mouseWorldPos, vp.localMousePos, 
+                      guiClicked, vp.isMouseInsideCanvas, &listeningForBind);
     }
 
     SaveSettings(settings);
