@@ -15,7 +15,19 @@
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
+float DistancePointSegment(Vector2 p, Vector2 a, Vector2 b){
+    Vector2 ab = Vector2Subtract(b, a);
+    Vector2 ap = Vector2Subtract(p, a);
 
+    float dotAB = Vector2DotProduct(ab, ab);
+    if(dotAB == 0.0f) return Vector2Distance(p, a);
+
+    float t = Vector2DotProduct(ap, ab) / dotAB;
+    t = fmaxf(0.0f, fminf(1.0f, t));
+
+    Vector2 proj = Vector2Add(a, Vector2Scale(ab, t));
+    return Vector2Distance(p, proj);
+}
 int main(void){
     const int screenWidth = 1400;
     const int screenHeight = 900;
@@ -214,7 +226,62 @@ int main(void){
             float clampedY = localMouseY;
             if(clampedY < 40.0f) clampedY = 40.0f;
             if(clampedY > doc.pageHeight) clampedY = doc.pageHeight;
-            if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
+            if(doc.activeBrush == BRUSH_ERASER){
+                float eraserRadius = settings.currentBrushThickness * 2.0f;
+                Vector2 localMousePos = {clampedX, clampedY};
+                Layer *activeLayer = &doc.pages[doc.activePage].layers[doc.pages[doc.activePage].activeLayer];
+                bool layerNeedsRebake = false;
+
+                for(int i = activeLayer->strokeCount - 1; i >=0; i--){
+                    Stroke *s = &activeLayer->strokes[i];
+                    bool hit = false;
+                    float hitThreshold = (s->thickness / 2.0f) + eraserRadius;
+
+                    if(s->type == BRUSH_CIRCLE){
+                        float radius = Vector2Distance(s->points[0].pos, s->points[1].pos);
+                        float distToCenter = Vector2Distance(localMousePos, s->points[0].pos);
+                        if(fabsf(distToCenter - radius) <= hitThreshold) hit = true;
+                    }
+                    else if (s->type == BRUSH_RECTANGLE) {
+                        Vector2 p1 = s->points[0].pos;
+                        Vector2 p2 = s->points[1].pos;
+                        Vector2 tr = {p2.x, p1.y};
+                        Vector2 bl = {p1.x, p2.y};
+                        if (DistancePointSegment(localMousePos, p1, tr) <= hitThreshold ||
+                            DistancePointSegment(localMousePos, tr, p2) <= hitThreshold ||
+                            DistancePointSegment(localMousePos, p2, bl) <= hitThreshold ||
+                            DistancePointSegment(localMousePos, bl, p1) <= hitThreshold) hit = true;
+                    } 
+                    else if (s->pointCount >= 2) {
+                        for (int j = 0; j < s->pointCount - 1; j++) {
+                            if (DistancePointSegment(localMousePos, s->points[j].pos, s->points[j+1].pos) <= hitThreshold) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hit) {
+                        RemoveStrokeFromLayer(activeLayer, i);
+                        layerNeedsRebake = true;
+                    }
+
+                }
+                if (layerNeedsRebake && doc.useBakedRendering) {
+                    BeginTextureMode(activeLayer->texture);
+                    ClearBackground(BLANK);
+                    Camera2D bakeCam = {0};
+                    bakeCam.zoom = doc.renderScale;
+                    BeginMode2D(bakeCam);
+                    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+                    for(int s = 0; s < activeLayer->strokeCount; s++) {
+                        RenderStroke(doc, &activeLayer->strokes[s], 0);
+                    }
+                    EndBlendMode();
+                    EndMode2D();
+                    EndTextureMode();
+                }
+            }
+            else if(doc.activeBrush == BRUSH_PEN || doc.activeBrush == BRUSH_HIGHLIGHTER || doc.activeBrush == BRUSH_PENCIL){
                 if(currentStroke.pointCount > 0){
                     Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
                     //float distSq = (mouseWorldPos.x - lastPoint.x)*( mouseWorldPos.x - lastPoint.x) + (mouseWorldPos.y  - lastPoint.y)*(mouseWorldPos.y  - lastPoint.y);
@@ -302,6 +369,10 @@ int main(void){
             }
         }
 
+        if(doc.activeBrush == BRUSH_ERASER){
+            float eraserRadius = settings.currentBrushThickness * 2.0f;
+            DrawCircleLines(mouseWorldPos.x, mouseWorldPos.y, eraserRadius, RED);
+        }
         EndMode2D();
         GUIHeaderDock(&doc, &settings, mousePos);
         // layer panel

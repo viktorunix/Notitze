@@ -7,6 +7,7 @@ typedef enum {
     BRUSH_PENCIL,
     BRUSH_LINE,
     BRUSH_RECTANGLE,
-    BRUSH_CIRCLE
+    BRUSH_CIRCLE,
+    BRUSH_ERASER
 } BrushType;
 #endif

@@ -51,6 +51,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
         AddStrokeToLayer(activeLayer, *currentStroke);
         if(doc->useBakedRendering){
+                
             if(activeLayer->texture.id == 0){
                 activeLayer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
                 SetTextureFilter(activeLayer->texture.texture, TEXTURE_FILTER_BILINEAR);

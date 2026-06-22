@@ -13,4 +13,5 @@ void FreePage(Page *page);
 void FreeDocument(Document *doc);
 void DeleteActivePage(Document *doc);
 void DeleteActiveLayer(Page *page);
+void RemoveStrokeFromLayer(Layer *layer, int index);
 #endif

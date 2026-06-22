@@ -16,7 +16,7 @@ bool startUpWindow(Document *doc, Camera2D *camera){
     DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, (Color){35,35,40,255});
     DrawRectangleRoundedLinesEx((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, 2.0f, (Color){60,60,65,255});
 
-    DrawText("Notitze 0.3V", boxX + boxW / 2 - MeasureText("Notitze 0.3V", 30)/ 2, boxY + 40, 30, WHITE);
+    DrawText("Notitze 0.4V", boxX + boxW / 2 - MeasureText("Notitze 0.4V", 30)/ 2, boxY + 40, 30, WHITE);
 
     //paper format
     DrawText("Paper Format", boxX + 60, boxY + 110,20, LIGHTGRAY);

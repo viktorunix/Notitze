@@ -216,7 +216,9 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "Rect", doc->activeBrush == BRUSH_RECTANGLE)) doc->activeBrush = BRUSH_RECTANGLE;
     curX += 70 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Circle", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
-    curX += 80 + 50;
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Eraser", doc->activeBrush == BRUSH_ERASER)) doc->activeBrush = BRUSH_ERASER;
+    curX += 80 + 30;
 
     for(int i = 0; i < 5; i++){
         Vector2 center = {curX + 20, curY + btnH / 2.0f};

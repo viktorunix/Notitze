@@ -90,3 +90,14 @@ void FreeDocument(Document *doc){
     *doc = (Document){0};
     
 }
+
+void RemoveStrokeFromLayer(Layer *layer, int index){
+    if(index < 0 || index >= layer->strokeCount) return;
+
+    free(layer->strokes[index].points);
+
+    for(int i = index; i < layer->strokeCount - 1; i++)
+        layer->strokes[i] = layer->strokes[i + 1];
+    layer->strokeCount--;
+
+}
