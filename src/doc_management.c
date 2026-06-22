@@ -1,5 +1,5 @@
 #include "include/doc_management.h"
-
+#include "include/command_system.h"
 void MoveActivePageUp(Document *doc){
     if(doc->activePage > 0){
         Page temp = doc->pages[doc->activePage];
@@ -18,38 +18,14 @@ void MoveActivePageDown(Document *doc){
     }
 }
 
-void UndoLastStrokes(Layer *layer, float renderScale, bool pressureEnabled, Document doc){
-    if(layer->strokeCount > 0 ){
-        layer->strokeCount--;
-        free(layer->strokes[layer->strokeCount].points);
-        layer->strokes[layer->strokeCount].points = NULL;
-        layer->strokes[layer->strokeCount].pointCount = 0;
-        layer->strokes[layer->strokeCount].capacity = 0;
 
-        if(layer->strokeCount == 0 && layer->texture.id != 0){
-            UnloadRenderTexture(layer->texture);
-            layer->texture = (RenderTexture2D){0};
-        }else{
-            BeginTextureMode(layer->texture);
-            ClearBackground(BLANK);
-            Camera2D bakeCam = {0};
-            bakeCam.zoom = renderScale;
-            BeginMode2D(bakeCam);
-            for(int i = 0; i < layer->strokeCount; i++)
-                RenderStroke(doc, &layer->strokes[i], 0);
-            EndMode2D();
-            EndTextureMode();
-        }
-        
-
-    }
-}
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
         Layer *activeLayer = &doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer];
 
         AddStrokeToLayer(activeLayer, *currentStroke);
+        PushDrawCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, currentStroke);
         if(doc->useBakedRendering){
                 
             if(activeLayer->texture.id == 0){

@@ -12,6 +12,7 @@
 #include "include/settings.h"
 #include "include/panels.h"
 #include "include/brush_system.h"
+#include "include/command_system.h"
 //#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
@@ -21,6 +22,7 @@ Color currentBrushColor = BLACK;
 float currentBrushThickness = 3.0f;
 
 int main(void){
+    InitCommandSystem();
     InitBrushSystem();
     RegisterBrush(CreatePenBrush());
     RegisterBrush(CreatePencilBrush());

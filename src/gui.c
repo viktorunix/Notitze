@@ -1,4 +1,5 @@
 #include "include/gui.h"
+#include "include/command_system.h"
 #include <stdio.h>
 bool GUIButton (Rectangle bounds, const char *text, bool isActive){
     bool isHovered = CheckCollisionPointRec(GetMousePosition(), bounds);

@@ -1,6 +1,7 @@
 #include "../include/brush_system.h"
 #include "../include/memory.h"
 #include "../include/doc_management.h"
+#include "../include/command_system.h"
 
 extern float currentBrushThickness;
 float DistancePointSegment(Vector2 p, Vector2 a, Vector2 b){
@@ -51,6 +52,7 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure){
                 }
             }
             if (hit) {
+                PushEraseCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, s, i);
                 RemoveStrokeFromLayer(activeLayer, i);
                 layerNeedsRebake = true;
             }
