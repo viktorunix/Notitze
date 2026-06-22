@@ -55,7 +55,13 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         return false;
     }
     int version = magic[3] - '0';
+    Texture2D tempBrush = doc->brushTex;
+    Texture2D tempPencil = doc->pencilTex;
+
     FreeDocument(doc);
+
+    doc->brushTex = tempBrush;
+    doc->pencilTex = tempPencil;
 
     if(version >= 2){
         fread(&doc->pageWidth, sizeof(float),1,file);
@@ -85,6 +91,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     }else{
         doc->pressureEnabled = false;
     }
+    printf("DAAAAAAAAAA\n");
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
         Page *page = &doc->pages[p];
@@ -118,11 +125,11 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 fread(&stroke.thickness, sizeof(float),1,file);
                 fread(&stroke.pointCount, sizeof(int),1,file);
                 stroke.capacity = stroke.pointCount;
-                stroke.points = (StrokePoint *)malloc(stroke.capacity * sizeof(Vector2));
+                stroke.points = (StrokePoint *)malloc(stroke.capacity * sizeof(StrokePoint));
                 fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
-            layer->texture = LoadRenderTexture((int)doc->pageWidth, (int)doc->pageHeight);
+            layer->texture = LoadRenderTexture((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
             SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
             BeginTextureMode(layer->texture);
             ClearBackground(BLANK);
