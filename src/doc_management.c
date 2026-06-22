@@ -26,15 +26,20 @@ void UndoLastStrokes(Layer *layer, float renderScale, bool pressureEnabled, Docu
         layer->strokes[layer->strokeCount].pointCount = 0;
         layer->strokes[layer->strokeCount].capacity = 0;
 
-        BeginTextureMode(layer->texture);
-        ClearBackground(BLANK);
-        Camera2D bakeCam = {0};
-        bakeCam.zoom = renderScale;
-        BeginMode2D(bakeCam);
-        for(int i = 0; i < layer->strokeCount; i++)
-            RenderStroke(doc, &layer->strokes[i], 0);
-        EndMode2D();
-        EndTextureMode();
+        if(layer->strokeCount == 0 && layer->texture.id != 0){
+            UnloadRenderTexture(layer->texture);
+            layer->texture = (RenderTexture2D){0};
+        }else{
+            BeginTextureMode(layer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = renderScale;
+            BeginMode2D(bakeCam);
+            for(int i = 0; i < layer->strokeCount; i++)
+                RenderStroke(doc, &layer->strokes[i], 0);
+            EndMode2D();
+            EndTextureMode();
+        }
         
 
     }
@@ -46,6 +51,10 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
         AddStrokeToLayer(activeLayer, *currentStroke);
         if(doc->useBakedRendering){
+            if(activeLayer->texture.id == 0){
+                activeLayer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
+                SetTextureFilter(activeLayer->texture.texture, TEXTURE_FILTER_BILINEAR);
+            }
             BeginTextureMode(activeLayer->texture);
             ClearBackground(BLANK);
             Camera2D bakeCam = {0};

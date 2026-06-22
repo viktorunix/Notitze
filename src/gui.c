@@ -100,7 +100,7 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
         Rectangle thumbRec = {pX + 60, lY + 6, 80, 113};
         DrawRectangleRec(thumbRec, RAYWHITE);
 
-        if(doc->useBakedRendering){
+        if(doc->useBakedRendering && layer->texture.id != 0){
             Rectangle source = {0,0, (float)layer->texture.texture.width, -(float)layer->texture.texture.height};
             DrawTexturePro(layer->texture.texture, source, thumbRec, (Vector2){0,0}, 0.0f, WHITE);
         }
@@ -117,7 +117,7 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
             }
             if(doc->isDrawing && doc->activePage >= 0 && l == aPage->activeLayer)
                 RenderStroke(*doc, &currentStroke, 0);
-            EndMode2D;
+            EndMode2D();
             EndScissorMode();
         }
 
@@ -167,7 +167,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     for(int l = 0; l < page->layerCount; l++){
         Layer *layer = &page->layers[l];
         if(!layer->isVisible) continue;
-        if(doc->useBakedRendering){
+        if(doc->useBakedRendering && layer->texture.id !=0){
             Rectangle source = {0,0, (float)layer->texture.texture.width, -(float)layer->texture.texture.height};
             Rectangle destination = {0, pageYOffset, doc->pageWidth, doc->pageHeight};
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);

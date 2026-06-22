@@ -25,7 +25,7 @@ void AddLayerToPage(Page *page, float width, float height, float renderScale){
     }
     page->layers[page->layerCount] = (Layer){0};
     page->layers[page->layerCount].isVisible = true;
-
+    page->layers[page->layerCount].texture = (RenderTexture2D){0};
     page->layers[page->layerCount].texture = LoadRenderTexture((int)width * renderScale, (int)height * renderScale);
     SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
     BeginTextureMode(page->layers[page->layerCount].texture);

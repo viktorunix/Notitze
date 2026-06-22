@@ -292,7 +292,7 @@ int main(void){
             Page *page = &doc.pages[draggedPage];
             for(int l = 0; l < page->layerCount; l++){
                 Layer *layer = &page->layers[l];
-                if(!layer->isVisible) continue;
+                if(!layer->isVisible || layer->texture.id == 0) continue;
 
                 Rectangle source = {0, 0, (float) layer->texture.texture.width, -(float)layer->texture.texture.height};
                 Rectangle destination = {0, floatY, doc.pageWidth, doc.pageHeight};
