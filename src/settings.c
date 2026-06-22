@@ -85,8 +85,10 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
 
     DrawText("Engine", boxX + 50, boxY + 300, 25, WHITE);
     int engineY = boxY + 340;
-    if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->useBakedRendering ? "Mode: Baked" : "Mode: Live", doc->useBakedRendering))
+    if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->useBakedRendering ? "Mode: Baked" : "Mode: Live", doc->useBakedRendering)){
         doc->useBakedRendering = !doc->useBakedRendering;
+        RebakeAllLayers(doc);
+    }
     engineY +=50;
     if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->pressureEnabled ? "Pressure: ON" : "Pressure: OFF", doc->pressureEnabled)){
         doc->pressureEnabled = !doc->pressureEnabled;

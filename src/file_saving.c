@@ -130,7 +130,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             bakeCam.zoom = doc->renderScale;
             BeginMode2D(bakeCam);
             for(int s = 0; s < layer->strokeCount; s++)
-                RenderStroke(&layer->strokes[s], 0, doc->pressureEnabled, *doc);
+                RenderStroke(*doc, &layer->strokes[s], 0);
             EndMode2D();
             EndTextureMode();
         }

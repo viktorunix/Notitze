@@ -85,8 +85,10 @@ int main(void){
 
             }else if(dist <= 128.0f){
                 float alpha = (128.0f - dist) / 2.0f;
-                Color c = WHITE;
-                c.a = (unsigned char)(alpha * 255.0f);
+                unsigned char aVal = (unsigned char) (alpha *255.0f);
+
+                Color c = {aVal, aVal, aVal, aVal};
+                //c.a = (unsigned char)(alpha * 255.0f);
                 ImageDrawPixel(&brushImage, x, y, c);
             }
         }
@@ -98,8 +100,8 @@ int main(void){
 
 
     Image pencilImage = GenImageColor(256,256, BLANK);
-    for(int y = 0; y < 256;y++){
-        for(int x = 0; x < 256; x++){
+    for(int y = 0; y < 256;y +=2){
+        for(int x = 0; x < 256; x+=2){
             float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
             if(dist <= 128.0f){
                 float randVal = (float)GetRandomValue(0,100) / 100.0f;
@@ -107,9 +109,9 @@ int main(void){
                 float density = falloff * falloff;
 
                 if(randVal < density){
-                    Color c = WHITE;
-                    c.a = (unsigned char)(GetRandomValue(100, 255) * falloff);
-                    ImageDrawPixel(&pencilImage, x, y ,c);
+                    //Color c = WHITE;
+                    //c.a = (unsigned char)(GetRandomValue(100, 255) * falloff);
+                    ImageDrawPixel(&pencilImage, x, y ,WHITE);
                 }
             }
         }

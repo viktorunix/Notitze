@@ -32,7 +32,7 @@ void UndoLastStrokes(Layer *layer, float renderScale, bool pressureEnabled, Docu
         bakeCam.zoom = renderScale;
         BeginMode2D(bakeCam);
         for(int i = 0; i < layer->strokeCount; i++)
-            RenderStroke(&layer->strokes[i], 0, pressureEnabled, doc);
+            RenderStroke(doc, &layer->strokes[i], 0);
         EndMode2D();
         EndTextureMode();
         
@@ -53,7 +53,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
             BeginMode2D(bakeCam);
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0; i < activeLayer->strokeCount; i++){
-                RenderStroke(&activeLayer->strokes[i], 0, doc->pressureEnabled, *doc);
+                RenderStroke(*doc, &activeLayer->strokes[i], 0);
             }
             EndBlendMode();
             EndMode2D();
