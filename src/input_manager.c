@@ -47,7 +47,7 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         Vector2 clampedPos = {clampedX, clampedY};
 
         if (doc->activeBrush <= BRUSH_PENCIL && currentStroke.pointCount > 0) {
-            float dist = Vector2Distance(vp->mouseWorldPos, currentStroke.points[currentStroke.pointCount - 1].pos);
+            float dist = Vector2Distance(vp->localMousePos, currentStroke.points[currentStroke.pointCount - 1].pos);
             float targetPressure = 1.0f - (dist / 30.0f);
             if (targetPressure < 0.1f) targetPressure = 0.1f;
             if (targetPressure > 1.0f) targetPressure = 1.0f;
