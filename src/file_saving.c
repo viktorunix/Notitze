@@ -60,6 +60,8 @@ void SaveDocumentBinary(const char *filename, Document *doc){
 
 
 bool LoadDocumentBinary(const char *filename, Document *doc){
+
+    int totalLayers = 0;
     FILE *file = fopen(filename, "rb");
     if(!file) return false;
     char magic[5] = {0};
@@ -85,7 +87,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     Page *currentPage = NULL;
     Layer *currentLayer = NULL;
     Stroke *currentStroke = NULL;
-
+ 
     while(!feof(file)){
         char tag[5] = {0};
         if(fread(tag, sizeof(char), 4, file) != 4) break;
@@ -128,6 +130,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentPage->activeLayer = meta.activeLayer;
         }
         else if(strcmp(tag, "LAYR") == 0){
+            totalLayers++;
             if(!currentPage) continue;
 
             if(currentPage->layerCount >= currentPage->layerCapacity){
@@ -175,6 +178,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         fseek(file, chunkEnd, SEEK_SET);
     }
 
+    int loadedLayers = 0;
     for(int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         for(int l = 0; l < page->layerCount; l++){
@@ -190,9 +194,12 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 RenderStroke(*doc, &layer->strokes[s],0);
             EndMode2D();
             EndTextureMode();
+            loadedLayers++;
+            GUILoading(loadedLayers, totalLayers);
         }
     }
     doc->activePage = 0;
+    printf("Layers: %d\n", totalLayers);
     fclose(file);
     return true;
 }

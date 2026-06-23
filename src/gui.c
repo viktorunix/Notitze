@@ -195,3 +195,26 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
 
 }
+
+void GUILoading(int progress, int total){
+    int boxW = 300;
+    int boxH = 150;
+    int barX = (GetScreenWidth() - boxW) /2;
+    int barY = (GetScreenHeight() - boxH) / 2;
+
+    int currentY = barY +50;
+    BeginDrawing();
+    DrawRectangleRounded((Rectangle){barX, barY, boxW, boxH},0.2f, 16, DARKGRAY);
+    //DrawText(TextFormat("%d/%d",progress, total),GetScreenWidth()/2, GetScreenHeight()/2, 20, WHITE);
+    DrawText("Loading Document",(GetScreenWidth() - MeasureText("LoadingDocument", 20))/2.0f, currentY, 20, WHITE);
+    currentY += 50;
+
+    DrawRectangleRounded((Rectangle){barX + 20, currentY, 260,16 },1.0f, 10, DARKGRAY);
+    DrawRectangleRoundedLinesEx((Rectangle){barX + 20, currentY, 260,16 },1.0f, 10,1.5f, WHITE);
+
+    float filledX = 260 * ((float)progress / total);
+    DrawRectangleRounded((Rectangle){barX + 20, currentY, filledX,16 },1.0f, 10, GREEN);
+
+
+    EndDrawing();
+}

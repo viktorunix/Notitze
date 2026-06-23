@@ -14,4 +14,5 @@ void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset);
+void GUILoading(int progress, int total);
 #endif
