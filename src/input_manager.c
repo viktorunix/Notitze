@@ -2,7 +2,7 @@
 #include "include/brush_system.h"
 #include "include/doc_management.h"
 #include "include/raymath.h"
-
+#include "include/tablet_support.h"
 #define PAGE_GAP 60
 
 
@@ -19,7 +19,7 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
                 *draggedPage = vp->hoveredPage;
                 *dragOffsetY = vp->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
             } else {
-                *currentPressure = 1.0f;
+                *currentPressure = GetTabletPressure();
                 GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure); 
             }
         } else {
@@ -45,15 +45,17 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
         Vector2 clampedPos = {clampedX, clampedY};
-
-        if (doc->activeBrush <= BRUSH_PENCIL && currentStroke.pointCount > 0) {
-            float dist = Vector2Distance(vp->localMousePos, currentStroke.points[currentStroke.pointCount - 1].pos);
-            float targetPressure = 1.0f - (dist / 30.0f);
-            if (targetPressure < 0.1f) targetPressure = 0.1f;
-            if (targetPressure > 1.0f) targetPressure = 1.0f;
-            *currentPressure = (*currentPressure * 0.7f) + (targetPressure * 0.3f);
+        if(IsUsingTablet()){
+            *currentPressure = GetTabletPressure();
+        } else{
+            if (doc->activeBrush <= BRUSH_PENCIL && currentStroke.pointCount > 0) {
+                float dist = Vector2Distance(vp->localMousePos, currentStroke.points[currentStroke.pointCount - 1].pos);
+                float targetPressure = 1.0f - (dist / 30.0f);
+                if (targetPressure < 0.1f) targetPressure = 0.1f;
+                if (targetPressure > 1.0f) targetPressure = 1.0f;
+                *currentPressure = (*currentPressure * 0.7f) + (targetPressure * 0.3f);
+            }
         }
-        
         GetActiveBrush()->OnDrag(doc, clampedPos, *currentPressure);
 
         if (!vp->isMouseInsideCanvas) {

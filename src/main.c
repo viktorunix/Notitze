@@ -16,6 +16,7 @@
 #include "include/renderer.h"
 #include "include/viewport.h"
 #include "include/input_manager.h"
+#include "include/tablet_support.h"
 //#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
@@ -40,6 +41,7 @@ int main(void){
    
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
+    InitTabletSupport();
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
     Document doc = {0};
