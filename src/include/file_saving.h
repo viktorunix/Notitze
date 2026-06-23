@@ -28,6 +28,7 @@
 #endif
 void SaveDocumentBinary(const char *filename, Document *doc);
 bool LoadDocumentBinary(const char *filename, Document *doc);
+bool LoadLegacyNTZ2(FILE *file, Document *doc);
 const char *ShowSaveFileDialog();
 const char *ShowOpenFileDialog();
 

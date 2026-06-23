@@ -1,43 +1,57 @@
 #include "include/file_saving.h"
-
+#include <stdint.h>
+static void WriteChunk(FILE *file, const char tag[4], void *data, uint32_t size){
+    fwrite(tag,1,4,file);
+    fwrite(&size, sizeof(uint32_t),1,file);
+    if(size > 0 && data != NULL)
+        fwrite(data,1,size,file);
+}
 void SaveDocumentBinary(const char *filename, Document *doc){
     FILE *file = fopen(filename, "wb");
     if(!file) return;
 
-    char magic[4] = "NTZ2";
+    char magic[4] = "NTZ3";
     fwrite(magic, sizeof(char), 4, file);
 
-    fwrite(&doc->pageWidth, sizeof(float), 1, file);
-    fwrite(&doc->pageHeight, sizeof(float), 1,file);
-    fwrite(&doc->ppi, sizeof(int), 1, file);
+    struct{
+        float w, h;
+        int ppi, count, pattern;
+        bool layers, baked, pressure;
+        float scale;
+    } docMeta = {
+        doc->pageWidth, doc->pageHeight, doc->ppi, doc->pageCount, doc->pattern,
+        doc->enableLayers, doc->useBakedRendering, doc->pressureEnabled, doc->renderScale
+    };
+    WriteChunk(file, "DOC ", &docMeta, sizeof(docMeta));
 
-
-    fwrite(&doc->pageCount, sizeof(int),1,file);
-    fwrite(&doc->pattern, sizeof(int), 1, file);
-    fwrite(&doc->enableLayers, sizeof(bool),1,file);
-
-
-    fwrite(&doc->useBakedRendering, sizeof(bool),1,file);
-    fwrite(&doc->renderScale, sizeof(float), 1, file);
-
-    fwrite(&doc->pressureEnabled, sizeof(bool),1,file);
-    for (int p = 0; p < doc->pageCount; p++){
+    for(int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
-        fwrite(&page->layerCount, sizeof(int),1,file);
-        fwrite(&page->activeLayer, sizeof(int), 1, file);
+        struct {
+            int layerCount, activeLayer
+        } pageMeta = {page->layerCount, page->activeLayer};
+        WriteChunk(file, "PAGE",&pageMeta, sizeof(pageMeta));
 
-        for(int l = 0; l < page->layerCount; l++){
+        for(int l = 0 ; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
-            fwrite(&layer->isVisible, sizeof(bool), 1, file);
-            fwrite(&layer->strokeCount, sizeof(int),1,file);
-            
+            struct {
+                bool isVisible;
+                int strokeCount;
+            } layerMeta = {layer->isVisible, layer->strokeCount};
+
+            WriteChunk(file, "LAYR", &layerMeta, sizeof(layerMeta));
             for(int s = 0; s < layer->strokeCount; s++){
                 Stroke *stroke = &layer->strokes[s];
-                fwrite(&stroke->type, sizeof(int),1,file);
-                fwrite(&stroke->color, sizeof(Color),1,file);
-                fwrite(&stroke->thickness, sizeof(float), 1, file);
-                fwrite(&stroke->pointCount, sizeof(int), 1, file);
-                fwrite(stroke->points, sizeof(StrokePoint), stroke->pointCount, file);
+                struct{
+                    int type;
+                    Color color;
+                    float thickness;
+                    int pointCount;
+                } strokeMeta ={stroke->type, stroke->color, stroke->thickness, stroke->pointCount};
+
+                WriteChunk(file, "STRM", &strokeMeta, sizeof(strokeMeta));
+
+                uint32_t pointSize = stroke->pointCount * sizeof(StrokePoint);
+                WriteChunk(file, "STRP", stroke->points, pointSize);
             }
         }
     }
@@ -48,50 +62,161 @@ void SaveDocumentBinary(const char *filename, Document *doc){
 bool LoadDocumentBinary(const char *filename, Document *doc){
     FILE *file = fopen(filename, "rb");
     if(!file) return false;
-    char magic[4];
-    fread(magic, sizeof(char), 4, file);
-    if(strstr(magic, "NTZ") == NULL) {
+    char magic[5] = {0};
+    fread(magic, 1, 4, file);
+    if(strncmp(magic, "NTZ", 3) != 0){
         fclose(file);
         return false;
     }
-    int version = magic[3] - '0';
+
     Texture2D tempBrush = doc->brushTex;
     Texture2D tempPencil = doc->pencilTex;
 
     FreeDocument(doc);
-
     doc->brushTex = tempBrush;
     doc->pencilTex = tempPencil;
 
-    if(version >= 2){
-        fread(&doc->pageWidth, sizeof(float),1,file);
-        fread(&doc->pageHeight, sizeof(float), 1, file);
-        fread(&doc->ppi, sizeof(int), 1, file);
-    } else{
-        doc->pageWidth = 842.0f;
-        doc->pageHeight = 1191.0f;
-        doc->ppi = 96;
+    if(magic[3] == '2'){
+        bool success = LoadLegacyNTZ2(file, doc);
+        fclose(file);
+        return success;
     }
+
+    Page *currentPage = NULL;
+    Layer *currentLayer = NULL;
+    Stroke *currentStroke = NULL;
+
+    while(!feof(file)){
+        char tag[5] = {0};
+        if(fread(tag, sizeof(char), 4, file) != 4) break;
+
+        uint32_t chunkSize = 0;
+        fread(&chunkSize, sizeof(uint32_t),1,file);
+        long chunkEnd = ftell(file) + chunkSize;
+
+        if(strcmp(tag, "DOC ") == 0){
+            struct {
+                float w, h;
+                int ppi, count, pattern;
+                bool layers, baked, pressure;
+                float scale;
+            } meta;
+            fread(&meta, sizeof(meta),1,file);
+            doc->pageWidth = meta.w;
+            doc->pageHeight = meta.h;
+            doc->ppi = meta.ppi;
+            //doc->pageCount = meta.count;
+            doc->pattern = meta.pattern;
+            doc->enableLayers = meta.layers;
+            doc->useBakedRendering = meta.baked;
+            doc->pressureEnabled = meta.pressure;
+            doc->renderScale = meta.scale;
+
+
+        }
+        else if(strcmp(tag, "PAGE") == 0){
+            AddPageToDocument(doc);
+            currentPage = &doc->pages[doc->pageCount - 1];
+
+            FreePage(currentPage);
+            currentPage->layerCount = 0;
+            currentPage->layerCapacity = 0;
+            currentPage->layers = NULL;
+
+            struct {int layerCount, activeLayer;}meta;
+            fread(&meta, sizeof(meta),1,file);
+            currentPage->activeLayer = meta.activeLayer;
+        }
+        else if(strcmp(tag, "LAYR") == 0){
+            if(!currentPage) continue;
+
+            if(currentPage->layerCount >= currentPage->layerCapacity){
+                currentPage->layerCapacity = currentPage->layerCapacity == 0 ? 4 : currentPage->layerCapacity * 2;
+                currentPage->layers = (Layer *)realloc(currentPage->layers, currentPage->layerCapacity * sizeof(Layer));
+            }
+
+            currentLayer = &currentPage->layers[currentPage->layerCount];
+            currentLayer->strokes = NULL;
+            currentLayer->strokeCount = 0;
+            currentLayer->capacity = 0;
+            currentLayer->texture = (RenderTexture2D){0};
+            struct {bool isVisible; int strokeCount;} meta;
+            fread(&meta, sizeof(meta), 1, file);
+            currentLayer->isVisible = meta.isVisible;
+
+            currentPage->layerCount++;
+        }
+        else if(strcmp(tag, "STRM") == 0){
+            if(!currentLayer) continue;
+            if(currentLayer->strokeCount >= currentLayer->capacity){
+                currentLayer->capacity = currentLayer->capacity == 0 ? 32 : currentLayer->capacity * 2;
+                currentLayer->strokes = (Stroke *)realloc(currentLayer->strokes, currentLayer->capacity * sizeof(Stroke));
+            }
+            currentStroke = &currentLayer->strokes[currentLayer->strokeCount];
+            struct {int type; Color color; float thickness; int pointCount;} meta;
+            fread(&meta, sizeof(meta), 1, file);
+
+            currentStroke->type = meta.type;
+            currentStroke->color = meta.color;
+            currentStroke->thickness = meta.thickness;
+            currentStroke->pointCount = meta.pointCount;
+            currentStroke->capacity = meta.pointCount;
+            currentStroke->points = NULL;
+
+            currentLayer->strokeCount++;
+        }
+        else if(strcmp(tag, "STRP") == 0){
+            if(currentStroke && currentStroke->pointCount > 0){
+                currentStroke->points = (StrokePoint *)malloc(chunkSize);
+                fread(currentStroke->points, 1, chunkSize, file);
+            }
+        }
+
+        fseek(file, chunkEnd, SEEK_SET);
+    }
+
+    for(int p = 0; p < doc->pageCount; p++){
+        Page *page = &doc->pages[p];
+        for(int l = 0; l < page->layerCount; l++){
+            Layer *layer = &page->layers[l];
+            layer->texture = LoadRenderTexture((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
+            SetTextureFilter(layer->texture.texture,TEXTURE_FILTER_BILINEAR);
+            BeginTextureMode(layer->texture);
+            ClearBackground(BLANK);
+            Camera2D bakeCam = {0};
+            bakeCam.zoom = doc->renderScale;
+            BeginMode2D(bakeCam);
+            for(int s = 0; s < layer->strokeCount; s++)
+                RenderStroke(*doc, &layer->strokes[s],0);
+            EndMode2D();
+            EndTextureMode();
+        }
+    }
+    doc->activePage = 0;
+    fclose(file);
+    return true;
+}
+bool LoadLegacyNTZ2(FILE *file, Document *doc){
+    
+   
+    fread(&doc->pageWidth, sizeof(float),1,file);
+    fread(&doc->pageHeight, sizeof(float), 1, file);
+    fread(&doc->ppi, sizeof(int), 1, file);
+    
     int totalPages = 0;
     fread(&totalPages, sizeof(int), 1, file);
     fread(&doc->pattern, sizeof(int),1,file);
     fread(&doc->enableLayers, sizeof(bool),1,file);
 
-    if(version >=2){
-        fread(&doc->useBakedRendering, sizeof(bool),1,file);
-        fread(&doc->renderScale, sizeof(float), 1, file);
+    
+    fread(&doc->useBakedRendering, sizeof(bool),1,file);
+    fread(&doc->renderScale, sizeof(float), 1, file);
 
-    } else{
-        doc->useBakedRendering = true;
-        doc->renderScale = 2.0f;
-    }
+    
 
-    if(version >=2){
-        fread(&doc->pressureEnabled, sizeof(bool),1,file);
-    }else{
-        doc->pressureEnabled = false;
-    }
-    printf("DAAAAAAAAAA\n");
+    
+    fread(&doc->pressureEnabled, sizeof(bool),1,file);
+
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
         Page *page = &doc->pages[p];
