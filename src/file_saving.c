@@ -1,5 +1,6 @@
 #include "include/file_saving.h"
 #include <stdint.h>
+#define MAX_PATH 1024
 static void WriteChunk(FILE *file, const char tag[4], void *data, uint32_t size){
     fwrite(tag,1,4,file);
     fwrite(&size, sizeof(uint32_t),1,file);
@@ -295,6 +296,41 @@ const char *ShowSaveFileDialog(){
     if(GetSaveFileName(&ofn)){
         return filename;
     }
+#elif defined(__linux)
+    static char filename[1024] = "";
+    filename[0] = '\0'; // Wipe ghost paths
+
+    // 1. Run zenity via system() which forces the program to completely FREEZE and wait.
+    // We output the file selection to a temporary hidden file in /tmp/
+    int status = system("zenity --file-selection --save --confirm-overwrite --title=\"Save Document\" --file-filter=\"*.ntz\" > /tmp/ntz_save_path.tmp 2>/dev/null");
+    
+    // WIFEXITED and WEXITSTATUS check if the user clicked "Cancel" or closed the window (returns non-zero status)
+    if (status != 0) {
+        remove("/tmp/ntz_save_path.tmp");
+        return NULL; 
+    }
+
+    // 2. Read the selected path back from our temporary file
+    FILE *f = fopen("/tmp/ntz_save_path.tmp", "r");
+    if (f) {
+        if (fgets(filename, sizeof(filename), f) != NULL) {
+            filename[strcspn(filename, "\n")] = '\0'; // Strip newline character
+        }
+        fclose(f);
+        remove("/tmp/ntz_save_path.tmp"); // Clean up temporary file
+    }
+
+    if (strlen(filename) > 0) {
+        // Auto-append .ntz if you forgot to type it
+        size_t len = strlen(filename);
+        if (len > 0 && (len < 4 || strcmp(filename + len - 4, ".ntz") != 0)) {
+            if (len + 5 < sizeof(filename)) { 
+                strcat(filename, ".ntz");
+            }
+        }
+        return filename;
+    }
+    return NULL;
 #endif
     return NULL;
 }
@@ -312,7 +348,33 @@ const char* ShowOpenFileDialog() {
     ofn.lpstrDefExt = "ntz";
 
     if (GetOpenFileNameA(&ofn)) return filename;
+#elif defined(__linux__)
+    static char filename[1024] = "";
+    filename[0] = '\0'; // Wipe ghost paths
+
+    // Freeze application and wait for selection
+    int status = system("zenity --file-selection --title=\"Open Document\" --file-filter=\"*.ntz\" > /tmp/ntz_open_path.tmp 2>/dev/null");
+    
+    if (status != 0) {
+        remove("/tmp/ntz_open_path.tmp");
+        return NULL;
+    }
+
+    FILE *f = fopen("/tmp/ntz_open_path.tmp", "r");
+    if (f) {
+        if (fgets(filename, sizeof(filename), f) != NULL) {
+            filename[strcspn(filename, "\n")] = '\0'; // Strip newline
+        }
+        fclose(f);
+        remove("/tmp/ntz_open_path.tmp");
+    }
+
+    if (strlen(filename) > 0) {
+        return filename;
+    }
+    return NULL;
+
 #endif
-    return NULL; 
+    return NULL;
 }
 

@@ -1,0 +1,31 @@
+CC = gcc
+CFLAGS = -O2 -I src/include -xc -std=c11
+LDFLAGS = -L src/lib
+LIBS = -l:libraylib.a -lm -lX11 -lGL
+
+SRC = $(wildcard src/*.c) $(wildcard src/tools/*.c)
+OBJ = $(patsubst src/%.c, build/%.o, $(patsubst src/tools/%.c, build/tools/%.o, $(SRC)))
+TARGET = notitze
+BIN_DIR = build/bin
+BIN_TARGET = $(BIN_DIR)/$(TARGET)
+
+
+.PHONY: all clean
+
+all: $(BIN_TARGET)
+
+$(BIN_TARGET): $(OBJ)
+	@mkdir -p build
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(OBJ) $(LDFLAGS) $(LIBS) -o $@
+
+build/%.o: src/%.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/tools/%.o: src/tools/%.c
+	@mkdir -p build/tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf build
