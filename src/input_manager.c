@@ -6,36 +6,37 @@
 #define PAGE_GAP 60
 
 
-extern Stroke currentStroke; 
+extern Stroke currentStroke;
 
 void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPage, float* dragOffsetY, float* currentPressure) {
-    
+
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked) {
         if (vp->isMouseInsideCanvas) {
             doc->activePage = vp->hoveredPage;
-            
-            if (vp->localMousePos.y <= 40) { 
+
+            if (vp->localMousePos.y <= 40) {
                 *draggedPage = vp->hoveredPage;
                 *dragOffsetY = vp->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
             } else {
                 *currentPressure = GetTabletPressure();
-                GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure); 
+                //printf("pressure = %f\n",*currentPressure);
+                GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure);
             }
         } else {
             vp->isPanning = true;
         }
     }
-    
+
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         vp->isPanning = true;
     }
-    
+
 
     if (*draggedPage != -1) {
         // Dragging a page header... (Handled visually by the renderer)
-    } 
+    }
     else if (doc->isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         float clampedX = vp->mouseWorldPos.x;
         if (clampedX < 0.0f) clampedX = 0.0f;
@@ -61,11 +62,11 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         if (!vp->isMouseInsideCanvas) {
             GetActiveBrush()->OnRelease(doc, clampedPos);
         }
-    } 
+    }
     else if (vp->isPanning) {
         ApplyPanning(vp);
     }
-    
+
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
         if (*draggedPage != -1) {
             int dropIndex = (int)(vp->mouseWorldPos.y / (doc->pageHeight + PAGE_GAP));
