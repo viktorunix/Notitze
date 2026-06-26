@@ -38,7 +38,7 @@ int main(void){
 
     const int screenWidth = 1400;
     const int screenHeight = 900;
-   
+
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
     InitTabletSupport();
@@ -50,6 +50,8 @@ int main(void){
     //AddPageToDocument(&doc);
     doc.enableLayers = false;
     doc.pattern = BG_BLANK;
+    doc.patternColor = (Color){200,215, 230, 255};
+    doc.patternSpacing = 30.0f;
     doc.activeBrush = BRUSH_PEN;
     doc.pageFormat = FORMAT_A4;
     doc.ppi = START_PPI;
@@ -96,7 +98,7 @@ int main(void){
     InitRenderer(&doc);
     while(!WindowShouldClose()){
 
-        
+
         if(isStartup){
             isStartup = startUpWindow(&doc,&vp.camera);
             continue;
@@ -126,17 +128,17 @@ int main(void){
         currentBrushColor = pallete[settings.selectedColorIndex];
         currentBrushThickness = settings.currentBrushThickness;
         SetActiveBrush(doc.activeBrush);
-        
+
         UpdateViewportMath(&vp, &doc, mousePos, guiClicked);
-        
+
         ProcessInputs(&doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
-        
-
- 
 
 
-    RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY, 
-                      mousePos, vp.mouseWorldPos, vp.localMousePos, 
+
+
+
+    RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY,
+                      mousePos, vp.mouseWorldPos, vp.localMousePos,
                       guiClicked, vp.isMouseInsideCanvas, &listeningForBind);
     }
 

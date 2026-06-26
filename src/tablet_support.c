@@ -116,8 +116,7 @@ static void* TabletPollerThread(void *arg){
                             atomic_store(&isTabletActive, true);
                         }
 
-                        // --- DIAGNOSTIC PRINT ---
-                        // You should see this flood your terminal when drawing!
+
                         printf(">> KERNEL RAW: %d | NORMALIZED: %.2f\n", ev.value, p);
                     }
                     else if (ev.type == EV_KEY) {

@@ -25,7 +25,11 @@ void SaveDocumentBinary(const char *filename, Document *doc){
         doc->enableLayers, doc->useBakedRendering, doc->pressureEnabled, doc->renderScale
     };
     WriteChunk(file, "DOC ", &docMeta, sizeof(docMeta));
-
+    struct{
+        Color c;
+        float s;
+    } bkgdMeta = {doc->patternColor, doc->patternSpacing};
+    WriteChunk(file, "BKGD", &bkgdMeta, sizeof(bkgdMeta));
     for(int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         struct {
@@ -117,6 +121,12 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             doc->renderScale = meta.scale;
 
 
+        }
+        else if(strcmp(tag, "BKGD") == 0){
+            struct {Color c; float s;} meta;
+            fread(&meta, sizeof(meta),1,file);
+            doc->patternColor = meta.c;
+            doc->patternSpacing = meta.s;
         }
         else if(strcmp(tag, "PAGE") == 0){
             AddPageToDocument(doc);

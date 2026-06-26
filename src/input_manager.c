@@ -20,7 +20,6 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
                 *dragOffsetY = vp->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
             } else {
                 *currentPressure = GetTabletPressure();
-                //printf("pressure = %f\n",*currentPressure);
                 GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure);
             }
         } else {

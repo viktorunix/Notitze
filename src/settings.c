@@ -1,5 +1,7 @@
 #include "include/settings.h"
 #include "include/command_system.h"
+#include "include/gui.h"
+#include "include/raylib.h"
 
 const char* KeyToString(int key){
     if (key == 0) return "NONE";
@@ -72,20 +74,31 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     int boxX = (GetScreenWidth() - boxW)/2;
     int boxY =  (GetScreenHeight() - boxH)/2;
 
-    
+
     DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, (Color){40, 40, 40, 255});
     DrawRectangleRoundedLinesEx((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, 2.0f, DARKGRAY);
-    
+
     if(GUIButton((Rectangle){boxX + 5, boxY + 5, 30,30}, "X", settings->showSettings)) settings->showSettings = !settings->showSettings;
     DrawText("Background", boxX + 50, boxY + 30, 20, WHITE);
     int col1X = boxX + 30;
-    if(GUIButton((Rectangle){col1X, boxY+80, 180, 40}, "Blank", doc->pattern == BG_BLANK)) doc->pattern = BG_BLANK;
-    if(GUIButton((Rectangle){col1X, boxY+130, 180, 40}, "Lined", doc->pattern == BG_LINED)) doc->pattern = BG_LINED;
-    if(GUIButton((Rectangle){col1X, boxY+180, 180, 40}, "Grid", doc->pattern == BG_GRID)) doc->pattern = BG_GRID;
-    if(GUIButton((Rectangle){col1X, boxY+230, 180, 40}, "Dots", doc->pattern == BG_DOTS)) doc->pattern =BG_DOTS;
+    if(GUIButton((Rectangle){col1X, boxY+70, 85, 40}, "Blank", doc->pattern == BG_BLANK)) doc->pattern = BG_BLANK;
+    if(GUIButton((Rectangle){col1X+95, boxY+70, 85, 40}, "Lined", doc->pattern == BG_LINED)) doc->pattern = BG_LINED;
+    if(GUIButton((Rectangle){col1X, boxY+120, 85, 40}, "Grid", doc->pattern == BG_GRID)) doc->pattern = BG_GRID;
+    if(GUIButton((Rectangle){col1X+95, boxY+120, 85, 40}, "Dots", doc->pattern == BG_DOTS)) doc->pattern =BG_DOTS;
 
-    DrawText("Engine", boxX + 50, boxY + 300, 25, WHITE);
-    int engineY = boxY + 340;
+    DrawText("Spacing", col1X, boxY+175, 20, LIGHTGRAY);
+    GUISlider((Rectangle){col1X + 85, boxY+177,95,16}, &doc->patternSpacing, 10.0f, 100.0f);
+
+    DrawText("Color", col1X, boxY+205, 20, LIGHTGRAY);
+    Color bgColors[] = {(Color){200,215,230,255}, LIGHTGRAY, (Color){255,150,150,255}, (Color){155,255,150,255}};
+    for(int i = 0 ;i <  4; i++){
+        Rectangle cb = {col1X + 85 + (i * 25), boxY+205,20, 20};
+        if(CheckCollisionPointRec(GetMousePosition(), cb) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) doc->patternColor = bgColors[i];
+            DrawRectangleRec(cb, bgColors[i]);
+            DrawRectangleLinesEx(cb, 1.0f, (doc->patternColor.r == bgColors[i].r && doc->patternColor.g == bgColors[i].g) ? WHITE : DARKGRAY);
+    }
+    DrawText("Engine", boxX + 50, boxY + 245, 25, WHITE);
+    int engineY = boxY + 285;
     if(GUIButton((Rectangle){col1X, engineY, 180, 40}, doc->useBakedRendering ? "Mode: Baked" : "Mode: Live", doc->useBakedRendering)){
         doc->useBakedRendering = !doc->useBakedRendering;
         RebakeAllLayers(doc);
@@ -119,7 +132,7 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
         const char * disp##bindID = (*listeningForBind == bindID) ? "PRESS KEY" : KeyToString(keyval); \
         if (GUIButton((Rectangle){xPos + 120, yPos, 110, 40}, disp##bindID, *listeningForBind == bindID)) *listeningForBind = bindID;
 
-    
+
     DRAW_BIND_ROW("Pen Brush", settings->binds.keyPen, BIND_PEN,col2X, currentY);
     currentY+=50;
     DRAW_BIND_ROW("Highlighter", settings->binds.keyHigh, BIND_HIGH, col2X, currentY);
@@ -129,7 +142,7 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     DRAW_BIND_ROW("Rect Tool", settings->binds.keyRect, BIND_RECT, col2X, currentY);
     currentY +=50;
     DRAW_BIND_ROW("Circle Tool", settings->binds.keyCircle, BIND_CIRCLE, col2X, currentY);
-    
+
     DrawText("System", boxX + 590, boxY + 30, 20, WHITE);
     int col3X = boxX + 520;
     currentY = boxY + 80;
@@ -171,7 +184,7 @@ bool LoadSettings(Settings *settings){
         fclose(file);
         return false;
     }
-    
+
     fread(&settings->binds, sizeof(Keybinds), 1, file);
     //printf("daaa\n");
     fread(&settings->showSettings, sizeof(bool), 1, file);
@@ -184,7 +197,7 @@ bool LoadSettings(Settings *settings){
     printf("%i\n", settings->pallete[2]);
     fclose(file);
     return true;
-    
+
 }
 void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     int barWidth = 1000;
@@ -232,8 +245,8 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
         DrawCircleLines(center.x, center.y, 20, (Color){0,0,0,100});
         curX+=45;
     }
-        
-    
+
+
     //row 2
     int r2Width = 955;
     curX = barX + (barWidth - r2Width) / 2;
@@ -243,7 +256,7 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 50 + gap;
     GUISlider((Rectangle){curX - 30, curY + 30, 120, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
 
-    
+
     curX +=110 + gap;
 
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);

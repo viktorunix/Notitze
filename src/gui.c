@@ -4,7 +4,7 @@
 bool GUIButton (Rectangle bounds, const char *text, bool isActive){
     bool isHovered = CheckCollisionPointRec(GetMousePosition(), bounds);
     bool isClicked = isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-    
+
     Color bgColor = isActive ? (Color){70, 130, 180,255} : (isHovered ? (Color){70, 70, 70, 255} : (Color){45, 45, 45, 255});
     Color borderColor = isActive ? SKYBLUE : (Color){80,80,80,255};
     Color textColor = isActive ? WHITE : LIGHTGRAY;
@@ -18,7 +18,7 @@ bool GUIButton (Rectangle bounds, const char *text, bool isActive){
 
 
     return isClicked;
-    
+
 }
 void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue){
     Vector2 mousePos = GetMousePosition();
@@ -51,26 +51,28 @@ void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue){
 }
 
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
-    Color lineColor = (Color){200, 215, 230, 255};
+    Color lineColor = doc->patternColor.a == 0 ? (Color){200,215,230,255} : doc->patternColor;
     Color marginColor = (Color){255, 150, 150, 180};
+    float spacing = doc->patternSpacing <= 5.0f ? 30.0f : doc->patternSpacing;
+
 
     if (pattern == BG_LINED){
         DrawLine(80, pageYOffset, 80, pageYOffset + doc->pageHeight, marginColor);
-        for(int y = 80; y < doc->pageHeight; y+=30){
+        for(int y = 80; y < doc->pageHeight; y+=spacing){
             DrawLine(0, pageYOffset + y, doc->pageWidth, pageYOffset + y, lineColor);
         }
     }
     else if(pattern == BG_GRID){
-        for(int x = 30; x < doc->pageWidth; x+=30)
+        for(int x = 30; x < doc->pageWidth; x+=spacing)
             DrawLine(x, pageYOffset, x, pageYOffset + doc->pageHeight, lineColor);
-        for(int y = 30; y < doc->pageHeight; y+=30)
+        for(int y = 30; y < doc->pageHeight; y+=spacing)
             DrawLine(0, pageYOffset + y, doc->pageWidth, pageYOffset + y, lineColor);
 
 
     }
     else if (pattern == BG_DOTS){
-        for(int x = 30; x < doc->pageWidth; x+=30){
-            for(int y = 30; y < doc->pageHeight; y+=30)
+        for(int x = 30; x < doc->pageWidth; x+=spacing){
+            for(int y = 30; y < doc->pageHeight; y+=spacing)
                 DrawCircle(x, pageYOffset + y, 2.0f, lineColor);
         }
     }
@@ -154,7 +156,7 @@ void RebakeAllLayers(Document *doc){
             EndBlendMode();
             EndMode2D();
             EndTextureMode();
-        }   
+        }
     }
 }
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
@@ -183,7 +185,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset){
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             RenderStroke(*doc, currentStroke, pageYOffset);
             EndBlendMode();
-    
+
         }
     }
     //paper drag bar

@@ -46,6 +46,7 @@ typedef struct {
     int activePage;
     BgPattern pattern;
 
+
     bool isDrawing;
     BrushType activeBrush;
 
@@ -62,5 +63,8 @@ typedef struct {
 
     Texture2D brushTex;
     Texture2D pencilTex;
+
+    Color patternColor;
+    float patternSpacing;
 } Document;
 #endif
