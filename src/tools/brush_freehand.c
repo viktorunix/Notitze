@@ -24,6 +24,7 @@ static void FreeHand_OnPress(Document *doc, Vector2 pos, float pressure){
 }
 
 static void FreeHand_OnDrag(Document *doc, Vector2 pos, float pressure){
+    #ifdef __WIN32
     if(currentStroke.pointCount > 0){
         Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
         float dist = Vector2Distance(pos, lastPoint);
@@ -36,6 +37,33 @@ static void FreeHand_OnDrag(Document *doc, Vector2 pos, float pressure){
             AddPointToStroke(&currentStroke, smoothPoint, pressure);
         }
     }
+    #elif defined(__linux__)
+
+    if(currentStroke.pointCount > 0){
+        Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
+        float dist = Vector2Distance(pos,lastPoint);
+
+        float stepSize = 2.0f;
+
+        if(dist >= stepSize){
+            int steps = (int)(dist/stepSize);
+
+            float lastPressure = currentStroke.points[currentStroke.pointCount - 1].pressure;
+            for(int i = 1; i <= steps; i++){
+                float t = (float)i / (float)steps;
+
+                Vector2 lerpPos = {
+                    lastPoint.x + (pos.x - lastPoint.x) * t,
+                    lastPoint.y + (pos.y - lastPoint.y) * t
+                };
+
+                float lerpPressure = lastPressure + (pressure - lastPressure) * t;
+                AddPointToStroke(&currentStroke, lerpPos, lerpPressure);
+            }
+        }
+    }
+
+    #endif
 }
 
 static void FreeHand_OnRelease(Document *doc, Vector2 pos){

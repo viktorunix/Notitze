@@ -8,6 +8,7 @@ static void WriteChunk(FILE *file, const char tag[4], void *data, uint32_t size)
         fwrite(data,1,size,file);
 }
 void SaveDocumentBinary(const char *filename, Document *doc){
+
     FILE *file = fopen(filename, "wb");
     if(!file) return;
 
@@ -28,7 +29,7 @@ void SaveDocumentBinary(const char *filename, Document *doc){
     for(int p = 0; p < doc->pageCount; p++){
         Page *page = &doc->pages[p];
         struct {
-            int layerCount, activeLayer
+            int layerCount, activeLayer;
         } pageMeta = {page->layerCount, page->activeLayer};
         WriteChunk(file, "PAGE",&pageMeta, sizeof(pageMeta));
 
@@ -88,7 +89,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     Page *currentPage = NULL;
     Layer *currentLayer = NULL;
     Stroke *currentStroke = NULL;
- 
+
     while(!feof(file)){
         char tag[5] = {0};
         if(fread(tag, sizeof(char), 4, file) != 4) break;
@@ -205,24 +206,24 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     return true;
 }
 bool LoadLegacyNTZ2(FILE *file, Document *doc){
-    
-   
+
+
     fread(&doc->pageWidth, sizeof(float),1,file);
     fread(&doc->pageHeight, sizeof(float), 1, file);
     fread(&doc->ppi, sizeof(int), 1, file);
-    
+
     int totalPages = 0;
     fread(&totalPages, sizeof(int), 1, file);
     fread(&doc->pattern, sizeof(int),1,file);
     fread(&doc->enableLayers, sizeof(bool),1,file);
 
-    
+
     fread(&doc->useBakedRendering, sizeof(bool),1,file);
     fread(&doc->renderScale, sizeof(float), 1, file);
 
-    
 
-    
+
+
     fread(&doc->pressureEnabled, sizeof(bool),1,file);
 
     for(int p = 0; p < totalPages; p++){
@@ -296,18 +297,18 @@ const char *ShowSaveFileDialog(){
     if(GetSaveFileName(&ofn)){
         return filename;
     }
-#elif defined(__linux)
+#elif defined(__linux__)
     static char filename[1024] = "";
     filename[0] = '\0'; // Wipe ghost paths
 
     // 1. Run zenity via system() which forces the program to completely FREEZE and wait.
     // We output the file selection to a temporary hidden file in /tmp/
     int status = system("zenity --file-selection --save --confirm-overwrite --title=\"Save Document\" --file-filter=\"*.ntz\" > /tmp/ntz_save_path.tmp 2>/dev/null");
-    
+
     // WIFEXITED and WEXITSTATUS check if the user clicked "Cancel" or closed the window (returns non-zero status)
     if (status != 0) {
         remove("/tmp/ntz_save_path.tmp");
-        return NULL; 
+        return NULL;
     }
 
     // 2. Read the selected path back from our temporary file
@@ -324,7 +325,7 @@ const char *ShowSaveFileDialog(){
         // Auto-append .ntz if you forgot to type it
         size_t len = strlen(filename);
         if (len > 0 && (len < 4 || strcmp(filename + len - 4, ".ntz") != 0)) {
-            if (len + 5 < sizeof(filename)) { 
+            if (len + 5 < sizeof(filename)) {
                 strcat(filename, ".ntz");
             }
         }
@@ -354,7 +355,7 @@ const char* ShowOpenFileDialog() {
 
     // Freeze application and wait for selection
     int status = system("zenity --file-selection --title=\"Open Document\" --file-filter=\"*.ntz\" > /tmp/ntz_open_path.tmp 2>/dev/null");
-    
+
     if (status != 0) {
         remove("/tmp/ntz_open_path.tmp");
         return NULL;
@@ -377,4 +378,3 @@ const char* ShowOpenFileDialog() {
 #endif
     return NULL;
 }
-
