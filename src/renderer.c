@@ -2,7 +2,6 @@
 #include "include/document.h"
 #include "include/raymath.h"
 #include "include/gui.h"
-#include "include/panels.h"
 #include "include/brush_system.h"
 
 #define PAGE_GAP 60

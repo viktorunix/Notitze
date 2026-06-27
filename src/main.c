@@ -10,7 +10,6 @@
 #include "include/doc_management.h"
 #include "include/gui.h"
 #include "include/settings.h"
-#include "include/panels.h"
 #include "include/brush_system.h"
 #include "include/command_system.h"
 #include "include/renderer.h"
