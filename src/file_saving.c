@@ -1,5 +1,6 @@
 #include "include/file_saving.h"
 #include <stdint.h>
+#include <stdio.h>
 #define MAX_PATH 1024
 static void WriteChunk(FILE *file, const char tag[4], void *data, uint32_t size){
     fwrite(tag,1,4,file);
@@ -387,4 +388,197 @@ const char* ShowOpenFileDialog() {
 
 #endif
     return NULL;
+}
+
+
+NotebookIndex ScanNotebook(const char *filename){
+    NotebookIndex idx = {0};
+    FILE *file = fopen(filename, "rb");
+    if (!file) return idx;
+
+    char magic[5] = {0};
+    fread(magic, 1, 4, file);
+    if(strcmp(magic, "NTZB") != 0){
+        fclose(file);
+        return idx;
+    }
+
+    char tempTitle[64] = "Untitled Note";
+
+    while(!feof(file)){
+        char tag[5] = {0};
+        uint32_t size = 0;
+        if (fread(tag, 1, 4, file) != 4) break;
+        if (fread(&size, sizeof(uint32_t), 1, file) != 1) break;
+
+        long chunkStart = ftell(file);
+
+        if(strcmp(tag, "TITL")  == 0) {
+            int readSize = size < 63 ? size : 63;
+            fread(tempTitle, 1, readSize, file);
+            tempTitle[readSize] = '\0';
+        }
+        else if (strcmp(tag, "FILE") == 0){
+            strcpy(idx.entries[idx.count].title, tempTitle);
+            idx.entries[idx.count].fileOffset = chunkStart;
+            idx.entries[idx.count].fileSize = size;
+
+            char ntzMagic[4];
+            fread(ntzMagic, 1, 4, file);
+            if(strncmp(ntzMagic, "NTZ3", 4) == 0){
+                char docTag[4];
+                uint32_t docSize;
+                fread(docTag, 1, 4, file);
+                fread(&docSize, sizeof(uint32_t), 1, file);
+                if(strncmp(docTag, "DOC ", 4) == 0){
+                    struct {float w, h; int ppi, count;} meta;
+                    fread(&meta, sizeof(meta), 1, file);
+                    idx.entries[idx.count].w = meta.w;
+                    idx.entries[idx.count].h = meta.h;
+                    idx.entries[idx.count].pageCount = meta.count;
+                }
+            }
+            idx.count++;
+            strcpy(tempTitle, "Untitled Note");
+            if(idx.count >= 256) break;
+        }
+        fseek(file, chunkStart + size, SEEK_SET);
+    }
+    fclose(file);
+    return idx;
+}
+
+void LoadFromNotebook(const char *notebookPath, int index, Document *doc){
+    NotebookIndex idx = ScanNotebook(notebookPath);
+    if(index < 0 || index >= idx.count) return;
+
+    FILE *nb  = fopen(notebookPath, "rb");
+    if(!nb) return;
+    fseek(nb, idx.entries[index].fileOffset, SEEK_SET);
+
+    const char *tempPath = "temp_load.ntz";
+    FILE *temp = fopen(tempPath, "wb");
+    if(temp){
+        char buffer[4096];
+        uint32_t remaining = idx.entries[index].fileSize;
+        while (remaining > 0){
+            uint32_t toRead = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
+            fread(buffer, 1, toRead, nb);
+            fwrite(buffer, 1, toRead, temp);
+            remaining -= toRead;
+        }
+        fclose(temp);
+
+        LoadDocumentBinary(tempPath, doc);
+
+        doc->notebookIndex = index;
+        strcpy(doc->documentTitle, idx.entries[index].title);
+        remove(tempPath);
+    }
+    fclose(nb);
+}
+
+void SaveToNotebook(const char *notebookPath, Document *doc){
+    const char *tempPath = "temp_save.ntz";
+    SaveDocumentBinary(tempPath, doc);
+
+    FILE *temp = fopen(tempPath, "rb");
+    if(!temp) return;
+    fseek(temp, 0, SEEK_END);
+    uint32_t newFileSize = ftell(temp);
+    fseek(temp, 0, SEEK_SET);
+
+    NotebookIndex idx = ScanNotebook(notebookPath);
+
+    if(doc->notebookIndex >= 0 && doc->notebookIndex < idx.count){
+        const char *rewritePath = "temp_rewrite.ntzbook";
+        FILE *oldNb = fopen(notebookPath, "rb");
+        FILE *newNb = fopen(rewritePath, "wb");
+
+        char magic[4] = "NTZB";
+        fwrite(magic, 1, 4, newNb);
+        fseek(oldNb, 4, SEEK_SET);
+
+        int currentIndex = 0;
+        while(!feof(oldNb) && currentIndex < idx.count){
+            char tag[5] = {0};
+            uint32_t size = 0;
+            if(fread(tag, 1, 4, oldNb) != 4) break;
+            if(fread(&size, sizeof(uint32_t), 1, oldNb) != 1) break;
+            long chunkStart = ftell(oldNb);
+
+            if(currentIndex == doc->notebookIndex){
+                if(strcmp(tag, "TITL") == 0){
+                    uint32_t titleLen = strlen(doc->documentTitle);
+                    WriteChunk(newNb, "TITL", doc->documentTitle, titleLen);
+
+                } else if(strcmp(tag, "FILE") == 0){
+                    fwrite("FILE", 1, 4, newNb);
+                    fwrite(&newFileSize, sizeof(uint32_t), 1, newNb);
+                    char buffer[4096];
+                    while(!feof(temp)){
+                        size_t bytes = fread(buffer, 1, sizeof(buffer), temp);
+                        if(bytes > 0) fwrite(buffer, 1, bytes, newNb);
+                    }
+                    currentIndex++;
+                }
+            } else{
+                fwrite(tag, 1, 4, newNb);
+                fwrite(&size, sizeof(uint32_t), 1, newNb);
+                char buffer[4096];
+                uint32_t remaining = size;
+                while(remaining > 0){
+                    uint32_t toRead = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
+                    fread(buffer, 1, toRead, oldNb);
+                    fwrite(buffer, 1, toRead, newNb);
+                    remaining -= toRead;
+                }
+                if(strcmp(tag, "FILE") == 0) currentIndex++;
+            }
+            fseek(oldNb, chunkStart + size, SEEK_SET);
+        }
+        fclose(oldNb);
+        fclose(newNb);
+        fclose(temp);
+        remove(tempPath);
+        remove(notebookPath);
+        rename(rewritePath, notebookPath);
+    } else {
+        FILE *check = fopen(notebookPath, "rb");
+                bool exists = (check != NULL);
+                if (check) fclose(check);
+
+
+                FILE *nb = fopen(notebookPath, "ab");
+                if (!nb) {
+                    fclose(temp);
+                    remove(tempPath);
+                    return;
+                }
+
+                if (!exists) {
+                    char magic[4] = "NTZB";
+                    fwrite(magic, 1, 4, nb);
+                }
+
+                uint32_t titleLen = strlen(doc->documentTitle);
+                if(titleLen == 0){
+                    strcpy(doc->documentTitle, "Untitled");
+                    titleLen = 8;
+                }
+                WriteChunk(nb, "TITL", doc->documentTitle, titleLen);
+
+                fwrite("FILE", 1,4, nb);
+                fwrite(&newFileSize, sizeof(uint32_t), 1, nb);
+                char buffer[4096];
+                while(!feof(temp)){
+                    size_t bytes = fread(buffer, 1, sizeof(buffer), temp);
+                    if(bytes > 0) fwrite(buffer, 1, bytes, nb);
+                }
+                fclose(nb);
+                fclose(temp);
+                remove(tempPath);
+
+                doc->notebookIndex = idx.count;
+    }
 }

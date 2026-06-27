@@ -1,5 +1,6 @@
 #include "include/settings.h"
 #include "include/command_system.h"
+#include "include/file_saving.h"
 #include "include/gui.h"
 #include "include/raylib.h"
 
@@ -199,7 +200,7 @@ bool LoadSettings(Settings *settings){
     return true;
 
 }
-void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
+bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     int barWidth = 1000;
     int barHeight = 140;
     int barY = 20;
@@ -248,27 +249,36 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
 
 
     //row 2
-    int r2Width = 955;
-    curX = barX + (barWidth - r2Width) / 2;
+    int r2Width = 1000;
+    curX = barX + 20;
     curY = barY + 15 + btnH + 15;
 
     DrawText("Brush Size", curX + 30, curY , 20, LIGHTGRAY);
-    curX += 50 + gap;
-    GUISlider((Rectangle){curX - 30, curY + 30, 120, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
+    curX += 110 + gap;
+    GUISlider((Rectangle){curX - 30, curY + 30, 100, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
 
 
-    curX +=110 + gap;
-
+    curX +=120 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Home", false)) return true;
+    curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);
     curX += 70 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Save", false)){
-        const char *path = ShowSaveFileDialog();
-        if (path) SaveDocumentBinary(path, doc);
+        SaveToNotebook("Library.ntzbook", doc);
     }
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Load", false)){
+
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Export", false)){
+        const char *path = ShowSaveFileDialog();
+        if(path) SaveDocumentBinary(path, doc);
+    }
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Import", false)){
         const char *path = ShowOpenFileDialog();
-        if(path) LoadDocumentBinary(path, doc);
+        if(path){
+            LoadDocumentBinary(path, doc);
+            doc->notebookIndex = -1;
+        }
     }
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoCommand(doc);
@@ -277,4 +287,5 @@ void GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Settings", settings->showSettings)) settings->showSettings = !settings->showSettings;
 
+    return false;
 }

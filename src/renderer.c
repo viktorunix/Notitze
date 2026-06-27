@@ -1,4 +1,5 @@
 #include "include/renderer.h"
+#include "include/document.h"
 #include "include/raymath.h"
 #include "include/gui.h"
 #include "include/panels.h"
@@ -6,7 +7,7 @@
 
 #define PAGE_GAP 60
 
-extern Stroke currentStroke; 
+extern Stroke currentStroke;
 
 void InitRenderer(Document* doc) {
     Image brushImage = GenImageColor(256, 256, BLANK);
@@ -48,24 +49,24 @@ void InitRenderer(Document* doc) {
     doc->pencilTex = pencilTexture;
 }
 
-void RenderApplication(Document* doc, Settings* settings, Camera2D camera, 
-                       int draggedPage, float dragOffsetY, 
-                       Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos, 
-                       bool guiClicked, bool isMouseInsideCanvas, 
-                       BindState* listeningForBind) {
-    
+void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
+                       int draggedPage, float dragOffsetY,
+                       Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos,
+                       bool guiClicked, bool isMouseInsideCanvas,
+                       BindState* listeningForBind, AppState *appState) {
+
     BeginDrawing();
     ClearBackground(DARKGRAY);
 
 
     BeginMode2D(camera);
-    
+
     for(int p = 0; p < doc->pageCount; p++){
         if(p == draggedPage) continue;
         float pageYOffset = p * (doc->pageHeight + PAGE_GAP);
         GUIPage(doc, &currentStroke, p, pageYOffset);
     }
-    
+
 
     if(draggedPage != -1){
         float floatY = mouseWorldPos.y - dragOffsetY;
@@ -86,7 +87,7 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
             EndBlendMode();
         }
     }
-    
+
 
     if(!guiClicked && isMouseInsideCanvas){
         GetActiveBrush()->RenderPreview(doc, localMousePos, settings->currentBrushThickness);
@@ -94,15 +95,17 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
     EndMode2D();
 
 
-    GUIHeaderDock(doc, settings, mousePos);
-    
+    if(GUIHeaderDock(doc, settings, mousePos)){
+        *appState = STATE_MENU;
+    }
+
     if(doc->enableLayers && !settings->showSettings){
         GUILayerPanel(doc, currentStroke);
     }
-    
+
     if(settings->showSettings){
         SettingsPage(doc, settings, listeningForBind);
     }
-    
+
     EndDrawing();
 }

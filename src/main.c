@@ -17,9 +17,12 @@
 #include "include/viewport.h"
 #include "include/input_manager.h"
 #include "include/tablet_support.h"
+#include "include/menu.h"
 //#include "include/windows.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
+
+
 
 Stroke currentStroke = {0};
 Color currentBrushColor = BLACK;
@@ -96,52 +99,64 @@ int main(void){
     bool isStartup = true;
 
     InitRenderer(&doc);
+
+    AppState appState = STATE_MENU;
+    InitMainMenu();
     while(!WindowShouldClose()){
 
-
-        if(isStartup){
-            isStartup = startUpWindow(&doc,&vp.camera);
-            continue;
+        if(appState == STATE_MENU){
+            BeginDrawing();
+            if(UpdateDrawMainMenu(&doc)) appState = STATE_EDITOR;
+            EndDrawing();
         }
-        Vector2 mousePos = GetMousePosition();
-        Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
+        else{
+            //if(isStartup){
+            //    isStartup = startUpWindow(&doc,&vp.camera);
+             //   continue;
+             //}
+             Vector2 mousePos = GetMousePosition();
+             Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
-        int barX = (GetScreenWidth() - barWidth / 2);
-        Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
-        bool guiClicked = settings.showSettings;
-        bool layerHovered = false;
-        if(doc.enableLayers && !settings.showSettings){
-            int pH = 60 + (doc.pages[doc.activePage].layerCount * 40) + (doc.pages[doc.activePage].layerCount > 1 ? 50 : 0);
-            Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
-            layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
-        }
-        bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
-        guiClicked = settings.showSettings || uiHovered;
-        SettingsBinds(&listeningForBind, &settings);
-        InputHandler(&doc, &settings, &listeningForBind);
+             int barX = (GetScreenWidth() - barWidth / 2);
+             Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
+             bool guiClicked = settings.showSettings;
+             bool layerHovered = false;
+             if(doc.enableLayers && !settings.showSettings){
+                 int pH = 60 + (doc.pages[doc.activePage].layerCount * 40) + (doc.pages[doc.activePage].layerCount > 1 ? 50 : 0);
+                 Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
+                 layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
+             }
+             bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
+             guiClicked = settings.showSettings || uiHovered;
+             SettingsBinds(&listeningForBind, &settings);
+             InputHandler(&doc, &settings, &listeningForBind);
 
-        // ui bar
-        if(mousePos.y < UI_HEIGHT && !settings.showSettings){
-            guiClicked = true;
-        }
+             // ui bar
+             if(mousePos.y < UI_HEIGHT && !settings.showSettings){
+                 guiClicked = true;
+             }
 
-        currentBrushColor = pallete[settings.selectedColorIndex];
-        currentBrushThickness = settings.currentBrushThickness;
-        SetActiveBrush(doc.activeBrush);
+             currentBrushColor = pallete[settings.selectedColorIndex];
+             currentBrushThickness = settings.currentBrushThickness;
+             SetActiveBrush(doc.activeBrush);
 
-        UpdateViewportMath(&vp, &doc, mousePos, guiClicked);
+             UpdateViewportMath(&vp, &doc, mousePos, guiClicked);
 
-        ProcessInputs(&doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
-
-
+             ProcessInputs(&doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
 
 
 
-    RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY,
+
+
+             RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY,
                       mousePos, vp.mouseWorldPos, vp.localMousePos,
-                      guiClicked, vp.isMouseInsideCanvas, &listeningForBind);
-    }
+                      guiClicked, vp.isMouseInsideCanvas, &listeningForBind, &appState);
 
+            if(appState == STATE_MENU){
+                InitMainMenu();
+            }
+        }
+    }
     SaveSettings(settings);
     FreeDocument(&doc);
     CloseWindow();

@@ -4,6 +4,10 @@
 #include "raymath.h"
 #include "brush.h"
 #include "paper.h"
+typedef enum{
+    STATE_MENU,
+    STATE_EDITOR
+} AppState;
 typedef enum {
     BG_BLANK = 0,
     BG_LINED,
@@ -66,5 +70,8 @@ typedef struct {
 
     Color patternColor;
     float patternSpacing;
+
+    int notebookIndex;
+    char documentTitle[64];
 } Document;
 #endif

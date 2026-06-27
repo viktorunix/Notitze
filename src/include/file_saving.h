@@ -32,4 +32,20 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc);
 const char *ShowSaveFileDialog();
 const char *ShowOpenFileDialog();
 
+typedef struct {
+    char title[64];
+    long fileOffset;
+    unsigned int fileSize;
+    float w, h;
+    int pageCount;
+} NotebookEntry;
+
+typedef struct {
+    int count;
+    NotebookEntry entries[256];
+} NotebookIndex;
+
+NotebookIndex ScanNotebook(const char *filename);
+void SaveToNotebook(const char *notebookPath, Document *doc);
+void LoadFromNotebook(const char *notebookPath, int index, Document *doc);
 #endif
