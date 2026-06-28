@@ -1,6 +1,8 @@
 #include "include/gui.h"
 #include "include/command_system.h"
+#include "include/raylib.h"
 #include <stdio.h>
+#include <string.h>
 bool GUIButton (Rectangle bounds, const char *text, bool isActive){
     bool isHovered = CheckCollisionPointRec(GetMousePosition(), bounds);
     bool isClicked = isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
@@ -48,6 +50,51 @@ void GUISlider(Rectangle bounds, float *value, float minValue, float maxValue){
     Vector2 knobCenter = {bounds.x + bounds.width * currentNorm, bounds.y + bounds.height / 2.0f};
     DrawCircleV(knobCenter, bounds.height * 0.8f, WHITE);
     DrawCircleLines(knobCenter.x, knobCenter.y, bounds.height * 0.8f, GRAY);
+}
+
+bool GUITextBox(Rectangle bounds, char *text, int maxChars, bool *isActive){
+    Vector2 mousePos = GetMousePosition();
+    bool isHovered = CheckCollisionPointRec(mousePos, bounds);
+
+    //toggling active state on click
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+        *isActive = isHovered;
+    }
+
+    //handling keyboard input when active
+    if(*isActive){
+        int key = GetCharPressed();
+        while(key > 0){
+            if((key >=32) && (key <= 125) && (strlen(text) < maxChars)){
+                int len = strlen(text);
+                text[len] = (char)key;
+                text[len+1] = '\0';
+            }
+            key = GetCharPressed();
+        }
+
+        // handling backspace
+        if(IsKeyPressed(KEY_BACKSPACE)){
+            int len = strlen(text);
+            if (len > 0) text[len - 1] = '\0';
+        }
+    }
+
+    //background
+    Color bgColor = *isActive ? (Color){60, 60, 65, 255} : (isHovered ? (Color){55,55,60,255} : (Color){45,45,50,255});
+    Color borderColor = *isActive ? SKYBLUE : (isHovered ? LIGHTGRAY : (Color){80,80,85,255});
+
+    DrawRectangleRounded(bounds, 0.2f, 10, bgColor);
+    DrawRectangleRoundedLinesEx(bounds,0.2f, 10, 1.5f, borderColor);
+
+    DrawText(text, bounds.x + 10, bounds.y + (bounds.height - 20) / 2, 20, WHITE);
+
+    //blinking cursor
+    if(*isActive && ((int)(GetTime() * 2) % 2 == 0)){
+        int textWidth = MeasureText(text, 20);
+        DrawText("_", bounds.x + 10 + textWidth, bounds.y + (bounds.height - 20) / 2, 20, LIGHTGRAY);
+    }
+    return *isActive;
 }
 
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
