@@ -42,6 +42,13 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure){
                 DistancePointSegment(pos, tr, p2) <= hitThreshold ||
                 DistancePointSegment(pos, p2, bl) <= hitThreshold ||
                 DistancePointSegment(pos, bl, p1) <= hitThreshold) hit = true;
+            }
+            else if(s->type == BRUSH_TEXT && s->pointCount > 0){
+                int fontSize = (int)(s->thickness * 8.0f);
+                if(fontSize < 10) fontSize = 10;
+                int textWidth = MeasureText(s->text, fontSize);
+                Rectangle textRec = {s->points[0].pos.x, s->points[0].pos.y, (float)textWidth, (float)fontSize};
+                if(CheckCollisionCircleRec(pos, eraserRadius, textRec)) hit = true;
             } 
             else if (s->pointCount >= 2) {
                 for (int j = 0; j < s->pointCount - 1; j++) {

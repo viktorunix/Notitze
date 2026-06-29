@@ -56,9 +56,24 @@ static void Text_RenderPreview(Document *doc, Vector2 pos, float thickness){
             int len = strlen(textBuffer);
             if(len > 0) textBuffer[len - 1] = '\0';
         }
-        if(IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)){
+        if(IsKeyPressed(KEY_ESCAPE)) {
             isTyping = false;
             doc->isDrawing = false;
+        }
+        else if(IsKeyPressed(KEY_ENTER)){
+            if(strlen(textBuffer) > 0){
+                currentStroke = (Stroke){0};
+                currentStroke.type = BRUSH_TEXT;
+                currentStroke.color = currentBrushColor;
+                currentStroke.thickness = currentBrushThickness;
+                strcpy(currentStroke.text, textBuffer);
+
+                AddPointToStroke(&currentStroke, textLocation, 1.0f);
+                FinishStroke(&currentStroke, doc);
+            }
+            isTyping = false;
+            doc->isDrawing = false;
+            textBuffer[0] = '\0';
         }
 
         DrawText(textBuffer, textLocation.x, textLocation.y, fontSize, currentBrushColor);
