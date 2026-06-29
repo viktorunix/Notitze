@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "raylib.h"
 #include "document.h"
+RenderTexture2D LoadRenderTexture2DOnly(int width, int height);
 void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure);
 void AddStrokeToLayer(Layer *layer, Stroke stroke);
 void AddLayerToPage(Page *page, float width, float height, float renderScale);

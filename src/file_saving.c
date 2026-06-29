@@ -182,7 +182,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentStroke->thickness = meta.thickness;
             currentStroke->pointCount = meta.pointCount;
             strcpy(currentStroke->text, meta.text);
-            
+
             currentStroke->capacity = meta.pointCount;
             currentStroke->points = NULL;
 
@@ -203,17 +203,23 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         Page *page = &doc->pages[p];
         for(int l = 0; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
-            layer->texture = LoadRenderTexture((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
-            SetTextureFilter(layer->texture.texture,TEXTURE_FILTER_BILINEAR);
-            BeginTextureMode(layer->texture);
-            ClearBackground(BLANK);
-            Camera2D bakeCam = {0};
-            bakeCam.zoom = doc->renderScale;
-            BeginMode2D(bakeCam);
-            for(int s = 0; s < layer->strokeCount; s++)
-                RenderStroke(*doc, &layer->strokes[s],0);
-            EndMode2D();
-            EndTextureMode();
+            if(layer->strokeCount > 0){
+                layer->texture = LoadRenderTexture2DOnly((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
+                SetTextureFilter(layer->texture.texture,TEXTURE_FILTER_BILINEAR);
+                BeginTextureMode(layer->texture);
+                ClearBackground(BLANK);
+                Camera2D bakeCam = {0};
+                bakeCam.zoom = doc->renderScale;
+                BeginMode2D(bakeCam);
+                for(int s = 0; s < layer->strokeCount; s++)
+                    RenderStroke(*doc, &layer->strokes[s],0);
+                EndMode2D();
+                EndTextureMode();
+            }else {
+                layer->texture = (RenderTexture2D){0};
+            }
+            
+           
             loadedLayers++;
             GUILoading(loadedLayers, totalLayers);
         }
@@ -282,7 +288,7 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
                 bytes_read = fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
-            layer->texture = LoadRenderTexture((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
+            layer->texture = LoadRenderTexture2DOnly((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
             SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
             BeginTextureMode(layer->texture);
             ClearBackground(BLANK);

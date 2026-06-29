@@ -32,7 +32,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
         if(doc->useBakedRendering){
 
             if(activeLayer->texture.id == 0){
-                activeLayer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
+                activeLayer->texture = LoadRenderTexture2DOnly((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
                 SetTextureFilter(activeLayer->texture.texture, TEXTURE_FILTER_BILINEAR);
             }
             BeginTextureMode(activeLayer->texture);

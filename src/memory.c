@@ -1,4 +1,28 @@
 #include "include/memory.h"
+#include "include/rlgl.h"
+
+RenderTexture2D LoadRenderTexture2DOnly(int width, int height){
+    RenderTexture2D target = {0};
+    target.id = rlLoadFramebuffer();
+
+    if(target.id > 0){
+        rlEnableFramebuffer(target.id);
+
+        //color texture
+        target.texture.id = rlLoadTexture(0, width, height, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+        target.texture.width = width;
+        target.texture.height = height;
+        target.texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        target.texture.mipmaps = 1;
+
+        rlFramebufferAttach(target.id, target.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+
+        if(rlFramebufferComplete(target.id))
+            TraceLog(LOG_INFO, "FBO: [ID %i] 2D-Only Framebuffer created", target.id);
+        rlDisableFramebuffer();
+    }
+    return target;
+}
 void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure){
     if(stroke->pointCount >= stroke->capacity){
         stroke->capacity = stroke->capacity == 0 ? 128 : stroke->capacity * 2;
@@ -25,12 +49,13 @@ void AddLayerToPage(Page *page, float width, float height, float renderScale){
     }
     page->layers[page->layerCount] = (Layer){0};
     page->layers[page->layerCount].isVisible = true;
+    
     page->layers[page->layerCount].texture = (RenderTexture2D){0};
-    page->layers[page->layerCount].texture = LoadRenderTexture((int)width * renderScale, (int)height * renderScale);
-    SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
-    BeginTextureMode(page->layers[page->layerCount].texture);
-    ClearBackground(BLANK);
-    EndTextureMode();
+    //page->layers[page->layerCount].texture = LoadRenderTexture((int)width * renderScale, (int)height * renderScale);
+    //SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
+    //BeginTextureMode(page->layers[page->layerCount].texture);
+    //ClearBackground(BLANK);
+    //EndTextureMode();
 
 
     page->activeLayer = page->layerCount;

@@ -139,7 +139,7 @@ void RebakeAllLayers(Document *doc){
             Layer *layer = &page->layers[l];
 
             UnloadRenderTexture(layer->texture);
-            layer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
+            layer->texture = LoadRenderTexture2DOnly((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
             SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
 
             BeginTextureMode(layer->texture);
@@ -257,7 +257,7 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
 void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
     if(pageIndex < 0 || pageIndex >= doc->pageCount) return;
 
-    RenderTexture2D exportTex = LoadRenderTexture(doc->pageWidth, doc->pageHeight);
+    RenderTexture2D exportTex = LoadRenderTexture2DOnly(doc->pageWidth, doc->pageHeight);
     BeginTextureMode(exportTex);
     ClearBackground(RAYWHITE);
 
