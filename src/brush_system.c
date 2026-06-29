@@ -22,6 +22,8 @@ void RegisterBrushes(void){
     RegisterBrush(CreateRectangleBrush());
     RegisterBrush(CreateCircleBrush());
     RegisterBrush(CreateEraserBrush());
+    RegisterBrush(CreateTextBrush());
+
 }
 void RegisterBrush(Brush brush){
     if(g_brushCount >= MAX_TOOLS) return;

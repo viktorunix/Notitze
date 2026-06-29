@@ -49,7 +49,7 @@ void SettingsBinds(BindState *listeningForBind, Settings *settings){
     }
 }
 void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind){
-    if(!settings->showSettings && *listeningForBind == BIND_NONE){
+    if(!settings->showSettings && *listeningForBind == BIND_NONE && !doc->isDrawing){
         if(IsKeyPressed(settings->binds.keyPen) && settings->binds.keyPen != 0) doc->activeBrush = BRUSH_PEN;
         if(IsKeyPressed(settings->binds.keyHigh) && settings->binds.keyHigh != 0) doc->activeBrush = BRUSH_HIGHLIGHTER;
         if(IsKeyPressed(settings->binds.keyLine) && settings->binds.keyLine != 0) doc->activeBrush = BRUSH_LINE;
@@ -237,7 +237,9 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Circle", doc->activeBrush == BRUSH_CIRCLE)) doc->activeBrush = BRUSH_CIRCLE;
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Eraser", doc->activeBrush == BRUSH_ERASER)) doc->activeBrush = BRUSH_ERASER;
-    curX += 80 + 30;
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "TextBox", doc->activeBrush == BRUSH_TEXT)) doc->activeBrush = BRUSH_TEXT;
+    curX +=80 + 30;
 
     for(int i = 0; i < 5; i++){
         Vector2 center = {curX + 20, curY + btnH / 2.0f};

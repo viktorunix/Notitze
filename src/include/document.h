@@ -26,6 +26,7 @@ typedef struct {
     Color color;
     float thickness;
     BrushType type;
+    char text[128];
 } Stroke;
 
 typedef struct {

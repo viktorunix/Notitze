@@ -29,5 +29,5 @@ Brush CreateLineBrush(void);
 Brush CreateRectangleBrush(void);
 Brush CreateCircleBrush(void);
 Brush CreateEraserBrush(void);
-
+Brush CreateTextBrush(void);
 #endif

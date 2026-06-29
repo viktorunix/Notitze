@@ -55,8 +55,9 @@ void SaveDocumentBinary(const char *filename, Document *doc){
                     Color color;
                     float thickness;
                     int pointCount;
+                    char text[128];
                 } strokeMeta ={stroke->type, stroke->color, stroke->thickness, stroke->pointCount};
-
+                strcpy(strokeMeta.text, stroke->text);
                 WriteChunk(file, "STRM", &strokeMeta, sizeof(strokeMeta));
 
                 uint32_t pointSize = stroke->pointCount * sizeof(StrokePoint);
@@ -172,13 +173,16 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 currentLayer->strokes = (Stroke *)realloc(currentLayer->strokes, currentLayer->capacity * sizeof(Stroke));
             }
             currentStroke = &currentLayer->strokes[currentLayer->strokeCount];
-            struct {int type; Color color; float thickness; int pointCount;} meta;
-            bytes_read = fread(&meta, sizeof(meta), 1, file);
+            struct {int type; Color color; float thickness; int pointCount; char text[128];} meta = {0};
+            size_t toRead = chunkSize < sizeof(meta) ? chunkSize : sizeof(meta);
+            bytes_read = fread(&meta, 1, toRead, file);
 
             currentStroke->type = meta.type;
             currentStroke->color = meta.color;
             currentStroke->thickness = meta.thickness;
             currentStroke->pointCount = meta.pointCount;
+            strcpy(currentStroke->text, meta.text);
+            
             currentStroke->capacity = meta.pointCount;
             currentStroke->points = NULL;
 

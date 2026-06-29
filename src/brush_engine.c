@@ -242,6 +242,13 @@ void RenderShape(Stroke *stroke, float pageYOffset){
 }
 void RenderStroke(Document doc, Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
+    if(stroke->type == BRUSH_TEXT){
+        int fontSize = (int)(stroke->thickness * 8.0f);
+        if(fontSize < 10) fontSize = 10;
+        Vector2 p = stroke->points[0].pos;
+        DrawText(stroke->text, p.x, p.y + pageYOffset, fontSize, stroke->color);
+        return;
+    }
     Color pColor = Premultiply(stroke->color);
     BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
     if(stroke->type == BRUSH_PEN)

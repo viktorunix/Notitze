@@ -23,7 +23,8 @@ void MoveActivePageDown(Document *doc){
 
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
-       (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2)){
+       (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2) ||
+        (currentStroke->type == BRUSH_TEXT && currentStroke->pointCount == 1)){
         Layer *activeLayer = &doc->pages[doc->activePage].layers[doc->pages[doc->activePage].activeLayer];
 
         AddStrokeToLayer(activeLayer, *currentStroke);
