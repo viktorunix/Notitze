@@ -3,11 +3,9 @@
 #include <stdio.h>
 #include "include/raylib.h"
 #include "include/raylib.h"
-#include "include/raymath.h"
 #include "include/document.h"
 #include "include/memory.h"
-#include "include/file_saving.h"
-#include "include/doc_management.h"
+
 #include "include/gui.h"
 #include "include/settings.h"
 #include "include/brush_system.h"
@@ -16,8 +14,9 @@
 #include "include/viewport.h"
 #include "include/input_manager.h"
 #include "include/tablet_support.h"
+#include "include/doc_management.h"
 #include "include/menu.h"
-//#include "include/windows.h"
+
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
@@ -30,13 +29,7 @@ float currentBrushThickness = 3.0f;
 int main(void){
     InitCommandSystem();
     InitBrushSystem();
-    RegisterBrush(CreatePenBrush());
-    RegisterBrush(CreatePencilBrush());
-    RegisterBrush(CreateHighlighterBrush());
-    RegisterBrush(CreateLineBrush());
-    RegisterBrush(CreateRectangleBrush());
-    RegisterBrush(CreateCircleBrush());
-    RegisterBrush(CreateEraserBrush());
+    RegisterBrushes();
 
     const int screenWidth = 1400;
     const int screenHeight = 900;
@@ -46,25 +39,11 @@ int main(void){
     InitTabletSupport();
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
-    Document doc = {0};
-    doc.renderScale = 2.0f;
-    doc.useBakedRendering = true;
-    //AddPageToDocument(&doc);
-    doc.enableLayers = false;
-    doc.pattern = BG_BLANK;
-    doc.patternColor = (Color){200,215, 230, 255};
-    doc.patternSpacing = 30.0f;
-    doc.activeBrush = BRUSH_PEN;
-    doc.pageFormat = FORMAT_A4;
-    doc.ppi = START_PPI;
-    doc.pageWidth = CUSTOM_W;
-    doc.pageHeight = CUSTOM_H;
-    doc.isDrawing = false;
-
+    Document *doc = CreateEmptyDocument();
     int draggedPage=  -1;
     float dragOffsetY= 0.0f;
     Viewport vp = {0};
-    InitViewport(&vp, doc.pageWidth);
+    InitViewport(&vp, doc->pageWidth);
 
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
 
@@ -79,10 +58,10 @@ int main(void){
     memcpy(settings.pallete, p, 5 * sizeof(Color));
     settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
     BindState listeningForBind = BIND_NONE;
-    printf("DAAA\n");
+
     Camera2D camera = {0};
     camera.target = (Vector2){0.0f, 0.0f};
-    camera.offset = (Vector2){ (GetScreenWidth() - doc.pageWidth) / 2.0f, 50.0f};
+    camera.offset = (Vector2){ (GetScreenWidth() - doc->pageWidth) / 2.0f, 50.0f};
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
     SetTargetFPS(120);
@@ -91,13 +70,13 @@ int main(void){
     int barWidth = 1000;
     int barHeight = 140;
     int barY = 20;
-    //LoadSettings(&settings);
+    LoadSettings(&settings);
 
 
     float currentPressure = 1.0f;
     bool isStartup = true;
 
-    InitRenderer(&doc);
+    InitRenderer(doc);
 
     AppState appState = STATE_MENU;
     InitMainMenu();
@@ -105,14 +84,11 @@ int main(void){
 
         if(appState == STATE_MENU){
             BeginDrawing();
-            if(UpdateDrawMainMenu(&doc)) appState = STATE_EDITOR;
+            if(UpdateDrawMainMenu(doc)) appState = STATE_EDITOR;
             EndDrawing();
         }
         else{
-            //if(isStartup){
-            //    isStartup = startUpWindow(&doc,&vp.camera);
-             //   continue;
-             //}
+
              Vector2 mousePos = GetMousePosition();
              Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
@@ -120,15 +96,15 @@ int main(void){
              Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
              bool guiClicked = settings.showSettings;
              bool layerHovered = false;
-             if(doc.enableLayers && !settings.showSettings){
-                 int pH = 60 + (doc.pages[doc.activePage].layerCount * 40) + (doc.pages[doc.activePage].layerCount > 1 ? 50 : 0);
+             if(doc->enableLayers && !settings.showSettings){
+                 int pH = 60 + (doc->pages[doc->activePage].layerCount * 40) + (doc->pages[doc->activePage].layerCount > 1 ? 50 : 0);
                  Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
                  layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
              }
              bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
              guiClicked = settings.showSettings || uiHovered;
              SettingsBinds(&listeningForBind, &settings);
-             InputHandler(&doc, &settings, &listeningForBind);
+             InputHandler(doc, &settings, &listeningForBind);
 
              // ui bar
              if(mousePos.y < UI_HEIGHT && !settings.showSettings){
@@ -137,17 +113,17 @@ int main(void){
 
              currentBrushColor = pallete[settings.selectedColorIndex];
              currentBrushThickness = settings.currentBrushThickness;
-             SetActiveBrush(doc.activeBrush);
+             SetActiveBrush(doc->activeBrush);
 
-             UpdateViewportMath(&vp, &doc, mousePos, guiClicked);
+             UpdateViewportMath(&vp, doc, mousePos, guiClicked);
 
-             ProcessInputs(&doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
-
-
+             ProcessInputs(doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
 
 
 
-             RenderApplication(&doc, &settings, vp.camera, draggedPage, dragOffsetY,
+
+
+             RenderApplication(doc, &settings, vp.camera, draggedPage, dragOffsetY,
                       mousePos, vp.mouseWorldPos, vp.localMousePos,
                       guiClicked, vp.isMouseInsideCanvas, &listeningForBind, &appState);
 
@@ -157,7 +133,7 @@ int main(void){
         }
     }
     SaveSettings(settings);
-    FreeDocument(&doc);
+    FreeDocument(doc);
     CloseWindow();
 
     return 0;

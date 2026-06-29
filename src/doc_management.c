@@ -1,5 +1,7 @@
 #include "include/doc_management.h"
 #include "include/command_system.h"
+#include "include/paper.h"
+#include <string.h>
 void MoveActivePageUp(Document *doc){
     if(doc->activePage > 0){
         Page temp = doc->pages[doc->activePage];
@@ -27,7 +29,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
         AddStrokeToLayer(activeLayer, *currentStroke);
         PushDrawCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, currentStroke);
         if(doc->useBakedRendering){
-                
+
             if(activeLayer->texture.id == 0){
                 activeLayer->texture = LoadRenderTexture((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
                 SetTextureFilter(activeLayer->texture.texture, TEXTURE_FILTER_BILINEAR);
@@ -46,7 +48,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
             EndTextureMode();
         }
     } else{
-        
+
         free(currentStroke->points);
     }
     *currentStroke = (Stroke){0};
@@ -69,4 +71,23 @@ void MovePageToIndex(Document *doc, int fromIndex, int toIndex){
     }
     doc->pages[toIndex] = temp;
     doc->activePage = toIndex;
+}
+
+Document* CreateEmptyDocument(){
+    Document *doc = (Document *)calloc(1, sizeof(Document));
+    doc->ppi = 150;
+    doc->pageFormat = FORMAT_A4;
+    doc->pattern = BG_BLANK;
+    doc->patternSpacing = 30.0f;
+    doc->patternColor = (Color){200, 215,230, 255};
+    doc->renderScale = 2.0f;
+
+    doc->useBakedRendering = true;
+    doc->pressureEnabled = true;
+    doc->enableLayers = false;
+    doc->notebookIndex = -1;
+
+    strcpy(doc->documentTitle, "Untitled Note");
+
+    return doc;
 }

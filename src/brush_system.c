@@ -1,6 +1,5 @@
 #include "include/brush_system.h"
 #include <stddef.h>
-
 #define MAX_TOOLS 20
 
 static Brush g_brushes[MAX_TOOLS];
@@ -15,6 +14,15 @@ void InitBrushSystem(void){
     g_brushCount = 0;
     g_activeBrush = NULL;
 }
+void RegisterBrushes(void){
+    RegisterBrush(CreatePenBrush());
+    RegisterBrush(CreatePencilBrush());
+    RegisterBrush(CreateHighlighterBrush());
+    RegisterBrush(CreateLineBrush());
+    RegisterBrush(CreateRectangleBrush());
+    RegisterBrush(CreateCircleBrush());
+    RegisterBrush(CreateEraserBrush());
+}
 void RegisterBrush(Brush brush){
     if(g_brushCount >= MAX_TOOLS) return;
 
@@ -27,7 +35,7 @@ void RegisterBrush(Brush brush){
 
     if(g_brushCount == 0)
         g_activeBrush = &g_brushes[0];
-    
+
     g_brushCount++;
 }
 

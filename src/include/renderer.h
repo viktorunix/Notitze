@@ -6,8 +6,13 @@
 #include "settings.h"
 
 
+
 void InitRenderer(Document* doc);
 
+void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
+void GUILayerPanel(Document *doc, Stroke currentStroke);
+void RebakeAllLayers(Document *doc);
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset);
 
 void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        int draggedPage, float dragOffsetY,
@@ -15,4 +20,6 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        bool guiClicked, bool isMouseInsideCanvas,
                        BindState* listeningForBind, AppState *appState);
 
+
+void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath);
 #endif

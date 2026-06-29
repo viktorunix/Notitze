@@ -1,7 +1,6 @@
 #ifndef DOCUMENT
 #define DOCUMENT
 #include "raylib.h"
-#include "raymath.h"
 #include "brush.h"
 #include "paper.h"
 typedef enum{

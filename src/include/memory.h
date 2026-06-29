@@ -4,7 +4,6 @@
 #include "raylib.h"
 #include "document.h"
 void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure);
-//void AddStrokeToPage(Page *page, Stroke stroke);
 void AddStrokeToLayer(Layer *layer, Stroke stroke);
 void AddLayerToPage(Page *page, float width, float height, float renderScale);
 void AddPageToDocument(Document *doc);

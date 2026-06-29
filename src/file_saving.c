@@ -1,4 +1,6 @@
 #include "include/file_saving.h"
+#include "include/raylib.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #define MAX_PATH 1024
@@ -100,7 +102,8 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         if(fread(tag, sizeof(char), 4, file) != 4) break;
 
         uint32_t chunkSize = 0;
-        fread(&chunkSize, sizeof(uint32_t),1,file);
+        size_t bytes_read;
+        bytes_read = fread(&chunkSize, sizeof(uint32_t),1,file);
         long chunkEnd = ftell(file) + chunkSize;
 
         if(strcmp(tag, "DOC ") == 0){
@@ -110,7 +113,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
                 bool layers, baked, pressure;
                 float scale;
             } meta;
-            fread(&meta, sizeof(meta),1,file);
+            bytes_read = fread(&meta, sizeof(meta),1,file);
             doc->pageWidth = meta.w;
             doc->pageHeight = meta.h;
             doc->ppi = meta.ppi;
@@ -125,7 +128,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         }
         else if(strcmp(tag, "BKGD") == 0){
             struct {Color c; float s;} meta;
-            fread(&meta, sizeof(meta),1,file);
+            bytes_read = fread(&meta, sizeof(meta),1,file);
             doc->patternColor = meta.c;
             doc->patternSpacing = meta.s;
         }
@@ -139,7 +142,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentPage->layers = NULL;
 
             struct {int layerCount, activeLayer;}meta;
-            fread(&meta, sizeof(meta),1,file);
+            bytes_read = fread(&meta, sizeof(meta),1,file);
             currentPage->activeLayer = meta.activeLayer;
         }
         else if(strcmp(tag, "LAYR") == 0){
@@ -157,7 +160,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentLayer->capacity = 0;
             currentLayer->texture = (RenderTexture2D){0};
             struct {bool isVisible; int strokeCount;} meta;
-            fread(&meta, sizeof(meta), 1, file);
+            bytes_read = fread(&meta, sizeof(meta), 1, file);
             currentLayer->isVisible = meta.isVisible;
 
             currentPage->layerCount++;
@@ -170,7 +173,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             }
             currentStroke = &currentLayer->strokes[currentLayer->strokeCount];
             struct {int type; Color color; float thickness; int pointCount;} meta;
-            fread(&meta, sizeof(meta), 1, file);
+            bytes_read = fread(&meta, sizeof(meta), 1, file);
 
             currentStroke->type = meta.type;
             currentStroke->color = meta.color;
@@ -184,7 +187,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         else if(strcmp(tag, "STRP") == 0){
             if(currentStroke && currentStroke->pointCount > 0){
                 currentStroke->points = (StrokePoint *)malloc(chunkSize);
-                fread(currentStroke->points, 1, chunkSize, file);
+                bytes_read = fread(currentStroke->points, 1, chunkSize, file);
             }
         }
 
@@ -219,23 +222,24 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
 bool LoadLegacyNTZ2(FILE *file, Document *doc){
 
 
-    fread(&doc->pageWidth, sizeof(float),1,file);
-    fread(&doc->pageHeight, sizeof(float), 1, file);
-    fread(&doc->ppi, sizeof(int), 1, file);
+    size_t bytes_read;
+    bytes_read = fread(&doc->pageWidth, sizeof(float),1,file);
+    bytes_read = fread(&doc->pageHeight, sizeof(float), 1, file);
+    bytes_read = fread(&doc->ppi, sizeof(int), 1, file);
 
     int totalPages = 0;
-    fread(&totalPages, sizeof(int), 1, file);
-    fread(&doc->pattern, sizeof(int),1,file);
-    fread(&doc->enableLayers, sizeof(bool),1,file);
+    bytes_read = fread(&totalPages, sizeof(int), 1, file);
+    bytes_read = fread(&doc->pattern, sizeof(int),1,file);
+    bytes_read = fread(&doc->enableLayers, sizeof(bool),1,file);
 
 
-    fread(&doc->useBakedRendering, sizeof(bool),1,file);
-    fread(&doc->renderScale, sizeof(float), 1, file);
+    bytes_read = fread(&doc->useBakedRendering, sizeof(bool),1,file);
+    bytes_read = fread(&doc->renderScale, sizeof(float), 1, file);
 
 
 
 
-    fread(&doc->pressureEnabled, sizeof(bool),1,file);
+    bytes_read = fread(&doc->pressureEnabled, sizeof(bool),1,file);
 
     for(int p = 0; p < totalPages; p++){
         AddPageToDocument(doc);
@@ -246,8 +250,8 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
         page->layerCapacity = 0;
         page->layers = NULL;
 
-        fread(&page->layerCount, sizeof(int),1,file);
-        fread(&page->activeLayer, sizeof(int), 1, file);
+        bytes_read = fread(&page->layerCount, sizeof(int),1,file);
+        bytes_read = fread(&page->activeLayer, sizeof(int), 1, file);
 
         page->layerCapacity = page->layerCount;
         page->layers = (Layer *)malloc(page->layerCapacity * sizeof(Layer));
@@ -256,8 +260,8 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
             Layer *layer = &page->layers[l];
             layer->capacity = 0;
             layer->strokes = NULL;
-            fread(&layer->isVisible, sizeof(bool),1,file);
-            fread(&layer->strokeCount, sizeof(int), 1, file);
+            bytes_read = fread(&layer->isVisible, sizeof(bool),1,file);
+            bytes_read = fread(&layer->strokeCount, sizeof(int), 1, file);
 
             layer->capacity = layer->strokeCount;
             if(layer->capacity > 0)
@@ -265,13 +269,13 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
 
             for(int s = 0; s < layer->strokeCount; s++){
                 Stroke stroke = {0};
-                fread(&stroke.type, sizeof(int), 1, file);
-                fread(&stroke.color, sizeof(Color),1,file);
-                fread(&stroke.thickness, sizeof(float),1,file);
-                fread(&stroke.pointCount, sizeof(int),1,file);
+                bytes_read = fread(&stroke.type, sizeof(int), 1, file);
+                bytes_read = fread(&stroke.color, sizeof(Color),1,file);
+                bytes_read = fread(&stroke.thickness, sizeof(float),1,file);
+                bytes_read = fread(&stroke.pointCount, sizeof(int),1,file);
                 stroke.capacity = stroke.pointCount;
                 stroke.points = (StrokePoint *)malloc(stroke.capacity * sizeof(StrokePoint));
-                fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
+                bytes_read = fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
             layer->texture = LoadRenderTexture((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
@@ -392,12 +396,13 @@ const char* ShowOpenFileDialog() {
 
 
 NotebookIndex ScanNotebook(const char *filename){
+    size_t bytes_read;
     NotebookIndex idx = {0};
     FILE *file = fopen(filename, "rb");
     if (!file) return idx;
 
     char magic[5] = {0};
-    fread(magic, 1, 4, file);
+    bytes_read = fread(magic, 1, 4, file);
     if(strcmp(magic, "NTZB") != 0){
         fclose(file);
         return idx;
@@ -415,7 +420,7 @@ NotebookIndex ScanNotebook(const char *filename){
 
         if(strcmp(tag, "TITL")  == 0) {
             int readSize = size < 63 ? size : 63;
-            fread(tempTitle, 1, readSize, file);
+            bytes_read = fread(tempTitle, 1, readSize, file);
             tempTitle[readSize] = '\0';
         }
         else if (strcmp(tag, "FILE") == 0){
@@ -424,15 +429,15 @@ NotebookIndex ScanNotebook(const char *filename){
             idx.entries[idx.count].fileSize = size;
 
             char ntzMagic[4];
-            fread(ntzMagic, 1, 4, file);
+            bytes_read = fread(ntzMagic, 1, 4, file);
             if(strncmp(ntzMagic, "NTZ3", 4) == 0){
                 char docTag[4];
                 uint32_t docSize;
-                fread(docTag, 1, 4, file);
-                fread(&docSize, sizeof(uint32_t), 1, file);
+                bytes_read = fread(docTag, 1, 4, file);
+                bytes_read = fread(&docSize, sizeof(uint32_t), 1, file);
                 if(strncmp(docTag, "DOC ", 4) == 0){
                     struct {float w, h; int ppi, count;} meta;
-                    fread(&meta, sizeof(meta), 1, file);
+                    bytes_read = fread(&meta, sizeof(meta), 1, file);
                     idx.entries[idx.count].w = meta.w;
                     idx.entries[idx.count].h = meta.h;
                     idx.entries[idx.count].pageCount = meta.count;
@@ -581,4 +586,10 @@ void SaveToNotebook(const char *notebookPath, Document *doc){
 
                 doc->notebookIndex = idx.count;
     }
+}
+
+void CacheTexture(const char* filename, Texture2D texture){
+    FILE *f = fopen(filename, "wb");
+    fwrite(&texture, sizeof(Texture2D),1,f);
+    fclose(f);
 }

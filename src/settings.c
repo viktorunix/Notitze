@@ -3,6 +3,7 @@
 #include "include/file_saving.h"
 #include "include/gui.h"
 #include "include/raylib.h"
+#include "include/renderer.h"
 
 const char* KeyToString(int key){
     if (key == 0) return "NONE";
@@ -171,7 +172,7 @@ void SaveSettings(Settings settings){
     fwrite(&settings.showSettings, sizeof(bool), 1, file);
     fwrite(&settings.selectedColorIndex, sizeof(int), 1, file);
     fwrite(&settings.currentBrushThickness, sizeof(float), 1, file);
-    fwrite(&settings.pallete,  sizeof(Color),5, file);
+    fwrite(settings.pallete,  sizeof(Color),5, file);
 
     fclose(file);
 }
@@ -180,28 +181,31 @@ bool LoadSettings(Settings *settings){
     if(!file) return false;
 
     char magic[6];
-    fread(magic, sizeof(char), 6, file);
+
+    size_t bytes_read;
+    bytes_read = fread(magic, sizeof(char), 6, file);
     if(strstr(magic, "NTZSTZ" )== NULL){
         fclose(file);
         return false;
     }
 
-    fread(&settings->binds, sizeof(Keybinds), 1, file);
+    bytes_read = fread(&settings->binds, sizeof(Keybinds), 1, file);
     //printf("daaa\n");
-    fread(&settings->showSettings, sizeof(bool), 1, file);
-    fread(&settings->selectedColorIndex, sizeof(int), 1, file);
-    fread(&settings->currentBrushThickness, sizeof(float),1, file);
+    bytes_read = fread(&settings->showSettings, sizeof(bool), 1, file);
+    bytes_read = fread(&settings->selectedColorIndex, sizeof(int), 1, file);
+    bytes_read = fread(&settings->currentBrushThickness, sizeof(float),1, file);
     printf("daaa\n");
-    fread(&settings->pallete, sizeof(Color), 5, file);
+    settings->pallete = (Color *)malloc(5 * sizeof(Color));
+    bytes_read = fread(settings->pallete, sizeof(Color), 5, file);
     printf("daaa\n");
 
-    printf("%i\n", settings->pallete[2]);
+    printf("%c\n", settings->pallete[2].a);
     fclose(file);
     return true;
 
 }
 bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
-    int barWidth = 1000;
+    int barWidth = 1100;
     int barHeight = 140;
     int barY = 20;
     int barX = (GetScreenWidth() - barWidth) / 2;
@@ -253,9 +257,9 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX = barX + 20;
     curY = barY + 15 + btnH + 15;
 
-    DrawText("Brush Size", curX + 30, curY , 20, LIGHTGRAY);
-    curX += 110 + gap;
-    GUISlider((Rectangle){curX - 30, curY + 30, 100, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
+    DrawText("Brush Size", curX , curY , 20, LIGHTGRAY);
+    //curX += 110 + gap;
+    GUISlider((Rectangle){curX, curY + 30, 100, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
 
 
     curX +=120 + gap;
@@ -268,9 +272,14 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     }
     curX += 80 + gap;
 
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Export", false)){
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Exp NTZ", false)){
         const char *path = ShowSaveFileDialog();
         if(path) SaveDocumentBinary(path, doc);
+    }
+    curX += 80 + gap;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Exp PNG", false)){
+        ExportPageToPNG(doc, doc->activePage, "Exported_Page.png");
+
     }
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Import", false)){

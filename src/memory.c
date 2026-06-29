@@ -82,7 +82,7 @@ void DeleteActiveLayer(Page *page){
     if(page->activeLayer >= page->layerCount)
         page->activeLayer = page->layerCount - 1;
 }
-
+/*
 void FreeDocument(Document *doc){
     for(int p = 0; p < doc->pageCount; p++)
         FreePage(&doc->pages[p]);
@@ -90,7 +90,18 @@ void FreeDocument(Document *doc){
     *doc = (Document){0};
     
 }
-
+    */
+void FreeDocument(Document *doc){
+    if(!doc) return;
+    for(int p = 0; p < doc->pageCount; p++)
+        FreePage(&doc->pages[p]);
+    if(doc->pages){
+        free(doc->pages);
+        doc->pages = NULL;
+    }
+        //free(doc);
+        //doc = NULL;
+}
 void RemoveStrokeFromLayer(Layer *layer, int index){
     if(index < 0 || index >= layer->strokeCount) return;
 

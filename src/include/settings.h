@@ -2,9 +2,7 @@
 #define SETTINGS
 #include "raylib.h"
 #include "document.h"
-#include "gui.h"
-#include "file_saving.h"
-#include "doc_management.h"
+
 typedef enum{
     BIND_NONE = 0,
     BIND_PEN,

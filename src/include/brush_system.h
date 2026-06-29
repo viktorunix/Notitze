@@ -2,7 +2,9 @@
 #define BRUSH_SYSTEM_H
 
 #include "raylib.h"
+#include "raymath.h"
 #include "document.h"
+#include <math.h>
 
 typedef struct Brush{
     int id;
@@ -15,6 +17,7 @@ typedef struct Brush{
 } Brush;
 
 void InitBrushSystem(void);
+void RegisterBrushes(void);
 void RegisterBrush(Brush tool);
 void SetActiveBrush(int id);
 Brush* GetActiveBrush(void);
