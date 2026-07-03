@@ -1,16 +1,30 @@
 #include "include/brush_engine.h"
+#include "include/raylib.h"
 
 StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
     StrokeAABB box = {999999.0f, 999999.0f, -999999.0f, -999999.0f};
-    
 
-    for (int i = 0; i < stroke->pointCount; i++) {
-        if (stroke->points[i].pos.x < box.minX) box.minX = stroke->points[i].pos.x;
-        if (stroke->points[i].pos.y < box.minY) box.minY = stroke->points[i].pos.y;
-        if (stroke->points[i].pos.x > box.maxX) box.maxX = stroke->points[i].pos.x;
-        if (stroke->points[i].pos.y > box.maxY) box.maxY = stroke->points[i].pos.y;
+    if(stroke->type == BRUSH_TEXT && stroke->pointCount > 0){
+        int fontSize = (int)(stroke->thickness * 8.0f);
+        if (fontSize < 10) fontSize = 10;
+
+
+        int textWidth = MeasureText(stroke->text, fontSize);
+
+        box.minX = stroke->points[0].pos.x;
+        box.minY = stroke->points[0].pos.y;
+        box.maxX = stroke->points[0].pos.x + textWidth;
+        box.maxY = stroke->points[0].pos.y + fontSize;
+    } else{
+
+
+        for (int i = 0; i < stroke->pointCount; i++) {
+            if (stroke->points[i].pos.x < box.minX) box.minX = stroke->points[i].pos.x;
+            if (stroke->points[i].pos.y < box.minY) box.minY = stroke->points[i].pos.y;
+            if (stroke->points[i].pos.x > box.maxX) box.maxX = stroke->points[i].pos.x;
+            if (stroke->points[i].pos.y > box.maxY) box.maxY = stroke->points[i].pos.y;
+        }
     }
-
     float padding = (stroke->thickness * 2.0f) + 150.0f;
     box.minX -= padding;
     box.minY -= padding;
@@ -191,7 +205,7 @@ void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
                 Rectangle source = {0, 0, (float)doc.pencilTex.width, (float)doc.pencilTex.height};
                 Rectangle dest = {basePos.x, basePos.y, currentThick, currentThick};
                 Vector2 origin = {currentThick / 2.0f, currentThick / 2.0f};
-                DrawTexturePro(doc.pencilTex, source, dest, origin, 0.0f, graphite); 
+                DrawTexturePro(doc.pencilTex, source, dest, origin, 0.0f, graphite);
             }
         }
     }
@@ -218,7 +232,7 @@ void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
             for (float d = 0; d <segDist; d+=1.0f){
                 float t = d / segDist;
                 Vector2 basePos = CalculateSplinePoint(p0.pos,p1.pos,p2.pos,p3.pos,t);
-                    
+
                 float currentPres = Lerp(p1.pressure, p2.pressure, t);
                 float finalPressure = doc.pressureEnabled ? currentPres : 1.0f;
                 float currentThick = stroke->thickness * finalPressure;
@@ -228,7 +242,7 @@ void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
                 Rectangle dest = {basePos.x, basePos.y, currentThick, currentThick};
                 Vector2 origin = {currentThick/ 2.0f, currentThick/ 2.0f};
                 DrawTexturePro(doc.pencilTex, source, dest, origin, 0.0f, graphite);
-            }    
+            }
         }
     }
 }
@@ -266,7 +280,9 @@ void RenderStroke(Document doc, Stroke *stroke, float pageYOffset){
         int fontSize = (int)(stroke->thickness * 8.0f);
         if(fontSize < 10) fontSize = 10;
         Vector2 p = stroke->points[0].pos;
+        EndBlendMode();
         DrawText(stroke->text, p.x, p.y + pageYOffset, fontSize, stroke->color);
+        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
         return;
     }
     Color pColor = Premultiply(stroke->color);

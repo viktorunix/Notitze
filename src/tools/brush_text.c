@@ -38,9 +38,11 @@ static void Text_OnPress(Document *doc, Vector2 pos, float pressure){
 }
 
 static void Text_RenderPreview(Document *doc, Vector2 pos, float thickness){
+    //textLocation = pos;
     int fontSize = (int)(thickness * 8.0f);
     if(fontSize < 10) fontSize = 10;
 
+    float pageYOffset = doc->activePage * (doc->pageHeight + 60);
     if(isTyping){
         // capture key input
         int key = GetCharPressed();
@@ -76,16 +78,16 @@ static void Text_RenderPreview(Document *doc, Vector2 pos, float thickness){
             textBuffer[0] = '\0';
         }
 
-        DrawText(textBuffer, textLocation.x, textLocation.y, fontSize, currentBrushColor);
+        DrawText(textBuffer, textLocation.x, textLocation.y + pageYOffset, fontSize, currentBrushColor);
 
         //blinking cursor
         if(((int)(GetTime() * 2) %2 == 0)){
             int w = MeasureText(textBuffer, fontSize);
-            DrawText("_", textLocation.x + w + 2, textLocation.y, fontSize, LIGHTGRAY);
+            DrawText("_", textLocation.x + w + 2, textLocation.y + pageYOffset, fontSize, LIGHTGRAY);
         }
     } else{
         //draw previw cursor to know how big is the font
-        DrawText("A", pos.x, pos.y - fontSize, fontSize, LIGHTGRAY);
+        DrawText("A", pos.x, pos.y  - fontSize, fontSize, LIGHTGRAY);
     }
 }
 

@@ -409,7 +409,7 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
 
 
     if(!guiClicked && isMouseInsideCanvas){
-        GetActiveBrush()->RenderPreview(doc, localMousePos, settings->currentBrushThickness);
+        GetActiveBrush()->RenderPreview(doc, mouseWorldPos, settings->currentBrushThickness);
     }
     EndMode2D();
 
