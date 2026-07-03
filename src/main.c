@@ -84,7 +84,10 @@ int main(void){
 
         if(appState == STATE_MENU){
             BeginDrawing();
-            if(UpdateDrawMainMenu(doc)) appState = STATE_EDITOR;
+            if(UpdateDrawMainMenu(doc)){
+                appState = STATE_EDITOR;
+                InitViewport(&vp, doc->pageWidth);
+            }
             EndDrawing();
         }
         else{
