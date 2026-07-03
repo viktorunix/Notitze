@@ -220,7 +220,7 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     int gap = 15;
 
     //row 1
-    int r1Width = 765;
+    int r1Width = 1000;
     int curX = barX + (barWidth - r1Width) / 2;
     int curY = barY + 15;
 
@@ -238,8 +238,8 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Eraser", doc->activeBrush == BRUSH_ERASER)) doc->activeBrush = BRUSH_ERASER;
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "TextBox", doc->activeBrush == BRUSH_TEXT)) doc->activeBrush = BRUSH_TEXT;
-    curX +=80 + 30;
+    if(GUIButton((Rectangle){curX, curY, 100, btnH}, "TextBox", doc->activeBrush == BRUSH_TEXT)) doc->activeBrush = BRUSH_TEXT;
+    curX += 100 + 30;
 
     for(int i = 0; i < 5; i++){
         Vector2 center = {curX + 20, curY + btnH / 2.0f};
@@ -272,21 +272,16 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);
     curX += 70 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Save", false)){
-        SaveToNotebook("Library.ntzbook", doc);
-    }
-    curX += 80 + gap;
 
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Exp NTZ", false)){
+    if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Exp NTZ", false)){
         const char *path = ShowSaveFileDialog();
         if(path) SaveDocumentBinary(path, doc);
     }
-    curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Exp PNG", false)){
+    curX += 100 + gap;
+    if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Exp PNG", false)){
         ExportPageToPNG(doc, doc->activePage, "Exported_Page.png");
-
     }
-    curX += 80 + gap;
+    curX += 100 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Import", false)){
         const char *path = ShowOpenFileDialog();
         if(path){
