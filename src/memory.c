@@ -135,6 +135,8 @@ void FreeDocument(Document *doc){
     }
         //free(doc);
         //doc = NULL;
+    doc->pageCount = 0;
+    doc->pageCapacity = 0;
 }
 void RemoveStrokeFromLayer(Layer *layer, int index){
     if(index < 0 || index >= layer->strokeCount) return;
