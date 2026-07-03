@@ -66,18 +66,7 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure){
 
         }
         if (layerNeedsRebake && doc->useBakedRendering) {
-            BeginTextureMode(activeLayer->texture);
-            ClearBackground(BLANK);
-            Camera2D bakeCam = {0};
-            bakeCam.zoom = doc->renderScale;
-            BeginMode2D(bakeCam);
-            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-            for(int s = 0; s < activeLayer->strokeCount; s++) {
-                RenderStroke(*doc, &activeLayer->strokes[s], 0);
-            }
-            EndBlendMode();
-            EndMode2D();
-            EndTextureMode();
+            RebakeAllLayers(doc);
         }
 }
 static void Eraser_RenderPreview(Document *doc, Vector2 pos, float thickness){

@@ -1,6 +1,6 @@
 #include "include/memory.h"
 #include "include/rlgl.h"
-
+#include <math.h>
 RenderTexture2D LoadRenderTexture2DOnly(int width, int height){
     RenderTexture2D target = {0};
     target.id = rlLoadFramebuffer();
@@ -41,22 +41,20 @@ void AddStrokeToLayer(Layer *layer, Stroke stroke){
     }
     layer->strokes[layer->strokeCount++] = stroke;
 }
-
-void AddLayerToPage(Page *page, float width, float height, float renderScale){
+void AddLayerToPage(Page *page, float width, float height, float renderScale) {
     if(page->layerCount >= page->layerCapacity){
         page->layerCapacity = page->layerCapacity == 0 ? 4 : page->layerCapacity * 2;
         page->layers = (Layer *)realloc(page->layers, page->layerCapacity * sizeof(Layer));
     }
-    page->layers[page->layerCount] = (Layer){0};
-    page->layers[page->layerCount].isVisible = true;
-    
-    page->layers[page->layerCount].texture = (RenderTexture2D){0};
-    //page->layers[page->layerCount].texture = LoadRenderTexture((int)width * renderScale, (int)height * renderScale);
-    //SetTextureFilter(page->layers[page->layerCount].texture.texture, TEXTURE_FILTER_BILINEAR);
-    //BeginTextureMode(page->layers[page->layerCount].texture);
-    //ClearBackground(BLANK);
-    //EndTextureMode();
 
+    Layer *newLayer = &page->layers[page->layerCount];
+    *newLayer = (Layer){0}; // Zero out memory
+    newLayer->isVisible = true;
+
+    newLayer->gridCols = (int)ceil((width * renderScale) / TILE_SIZE);
+    newLayer->gridRows = (int)ceil((height * renderScale) / TILE_SIZE);
+    int totalTiles = newLayer->gridCols * newLayer->gridRows;
+    newLayer->tiles = (Tile *)calloc(totalTiles, sizeof(Tile));
 
     page->activeLayer = page->layerCount;
     page->layerCount++;
@@ -73,11 +71,22 @@ void AddPageToDocument(Document *doc){
     doc->pageCount++;
 }
 
-void FreeLayer(Layer *layer){
-    for(int s = 0; s < layer->strokeCount;s++)
+void FreeLayer(Layer *layer) {
+    for(int s = 0; s < layer->strokeCount; s++) {
         free(layer->strokes[s].points);
+    }
     free(layer->strokes);
-    UnloadRenderTexture(layer->texture);
+
+    if (layer->tiles) {
+        int totalTiles = layer->gridCols * layer->gridRows;
+        for (int i = 0; i < totalTiles; i++) {
+            if (layer->tiles[i].isAllocated) {
+                UnloadRenderTexture(layer->tiles[i].texture);
+            }
+        }
+        free(layer->tiles);
+        layer->tiles = NULL;
+    }
 }
 
 void FreePage(Page *page){
@@ -92,7 +101,7 @@ void DeleteActivePage(Document *doc){
     for(int i = p; i < doc->pageCount - 1; i++)
         doc->pages[i] = doc->pages[i + 1];
     doc->pageCount--;
-    if(doc->activePage >= doc->pageCount) 
+    if(doc->activePage >= doc->pageCount)
         doc->activePage = doc->pageCount - 1;
 
 }
@@ -113,7 +122,7 @@ void FreeDocument(Document *doc){
         FreePage(&doc->pages[p]);
     free(doc->pages);
     *doc = (Document){0};
-    
+
 }
     */
 void FreeDocument(Document *doc){

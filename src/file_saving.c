@@ -159,8 +159,9 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentLayer->strokes = NULL;
             currentLayer->strokeCount = 0;
             currentLayer->capacity = 0;
-            currentLayer->texture = (RenderTexture2D){0};
-            struct {bool isVisible; int strokeCount;} meta;
+            currentLayer->tiles = NULL;
+            currentLayer->gridCols = 0;
+            currentLayer->gridRows = 0;      struct {bool isVisible; int strokeCount;} meta;
             bytes_read = fread(&meta, sizeof(meta), 1, file);
             currentLayer->isVisible = meta.isVisible;
 
@@ -199,30 +200,8 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
     }
 
     int loadedLayers = 0;
-    for(int p = 0; p < doc->pageCount; p++){
-        Page *page = &doc->pages[p];
-        for(int l = 0; l < page->layerCount; l++){
-            Layer *layer = &page->layers[l];
-            if(layer->strokeCount > 0){
-                layer->texture = LoadRenderTexture2DOnly((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
-                SetTextureFilter(layer->texture.texture,TEXTURE_FILTER_BILINEAR);
-                BeginTextureMode(layer->texture);
-                ClearBackground(BLANK);
-                Camera2D bakeCam = {0};
-                bakeCam.zoom = doc->renderScale;
-                BeginMode2D(bakeCam);
-                for(int s = 0; s < layer->strokeCount; s++)
-                    RenderStroke(*doc, &layer->strokes[s],0);
-                EndMode2D();
-                EndTextureMode();
-            }else {
-                layer->texture = (RenderTexture2D){0};
-            }
-            
-           
-            loadedLayers++;
-            GUILoading(loadedLayers, totalLayers);
-        }
+    if (doc->useBakedRendering) {
+        RebakeAllLayers(doc);
     }
     doc->activePage = 0;
     printf("Layers: %d\n", totalLayers);
@@ -270,6 +249,9 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
             Layer *layer = &page->layers[l];
             layer->capacity = 0;
             layer->strokes = NULL;
+            layer->tiles = NULL;
+            layer->gridCols = 0;
+            layer->gridRows = 0;
             bytes_read = fread(&layer->isVisible, sizeof(bool),1,file);
             bytes_read = fread(&layer->strokeCount, sizeof(int), 1, file);
 
@@ -288,18 +270,11 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
                 bytes_read = fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
-            layer->texture = LoadRenderTexture2DOnly((int)doc->pageWidth * doc->renderScale, (int)doc->pageHeight * doc->renderScale);
-            SetTextureFilter(layer->texture.texture, TEXTURE_FILTER_BILINEAR);
-            BeginTextureMode(layer->texture);
-            ClearBackground(BLANK);
-            Camera2D bakeCam = {0};
-            bakeCam.zoom = doc->renderScale;
-            BeginMode2D(bakeCam);
-            for(int s = 0; s < layer->strokeCount; s++)
-                RenderStroke(*doc, &layer->strokes[s], 0);
-            EndMode2D();
-            EndTextureMode();
+            
         }
+    }
+    if (doc->useBakedRendering) {
+        RebakeAllLayers(doc);
     }
     doc->activePage = 0;
     fclose(file);

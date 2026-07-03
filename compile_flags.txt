@@ -1,2 +1,4 @@
 -xc
 -std=c11
+-isystem
+C:\Users\Andrei\Documents\programs\mingw64\x86_64-w64-mingw32\include

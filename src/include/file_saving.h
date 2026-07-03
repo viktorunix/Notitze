@@ -4,6 +4,7 @@
 #include <string.h>
 #include "memory.h"
 #include "gui.h"
+#include "renderer.h"
 // windows API
 #ifdef _WIN32
     #define Rectangle WinRectangle

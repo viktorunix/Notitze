@@ -1,4 +1,24 @@
 #include "include/brush_engine.h"
+
+StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
+    StrokeAABB box = {999999.0f, 999999.0f, -999999.0f, -999999.0f};
+    
+
+    for (int i = 0; i < stroke->pointCount; i++) {
+        if (stroke->points[i].pos.x < box.minX) box.minX = stroke->points[i].pos.x;
+        if (stroke->points[i].pos.y < box.minY) box.minY = stroke->points[i].pos.y;
+        if (stroke->points[i].pos.x > box.maxX) box.maxX = stroke->points[i].pos.x;
+        if (stroke->points[i].pos.y > box.maxY) box.maxY = stroke->points[i].pos.y;
+    }
+
+    float padding = (stroke->thickness * 2.0f) + 150.0f;
+    box.minX -= padding;
+    box.minY -= padding;
+    box.maxX += padding;
+    box.maxY += padding;
+
+    return box;
+}
 Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
     float t2 = t * t;
     float t3 = t2 * t;

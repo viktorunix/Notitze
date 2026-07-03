@@ -31,22 +31,54 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
         PushDrawCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, currentStroke);
         if(doc->useBakedRendering){
 
-            if(activeLayer->texture.id == 0){
-                activeLayer->texture = LoadRenderTexture2DOnly((int)(doc->pageWidth * doc->renderScale), (int)(doc->pageHeight * doc->renderScale));
-                SetTextureFilter(activeLayer->texture.texture, TEXTURE_FILTER_BILINEAR);
+           StrokeAABB bounds = CalculateStrokeAABB(currentStroke);
+
+            //map world coordinates to tile grid indices (factoring in renderScale)
+            int startCol = (int)floor((bounds.minX * doc->renderScale) / TILE_SIZE);
+            int endCol   = (int)floor((bounds.maxX * doc->renderScale) / TILE_SIZE);
+            int startRow = (int)floor((bounds.minY * doc->renderScale) / TILE_SIZE);
+            int endRow   = (int)floor((bounds.maxY * doc->renderScale) / TILE_SIZE);
+
+            //clamp to grid boundaries to prevent segfaults
+            if (startCol < 0) startCol = 0;
+            if (startRow < 0) startRow = 0;
+            if (endCol >= activeLayer->gridCols) endCol = activeLayer->gridCols - 1;
+            if (endRow >= activeLayer->gridRows) endRow = activeLayer->gridRows - 1;
+
+            //the Targeted Bake Loop
+            for (int row = startRow; row <= endRow; row++) {
+                for (int col = startCol; col <= endCol; col++) {
+                    int tileIndex = (row * activeLayer->gridCols) + col;
+                    Tile *tile = &activeLayer->tiles[tileIndex];
+
+
+                    if (!tile->isAllocated) {
+                        tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
+                        SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_POINT);
+                        tile->isAllocated = true;
+                    }
+                    BeginTextureMode(tile->texture);
+                    ClearBackground(BLANK);
+
+                    Camera2D tileCam = {0};
+                    //shift the camera so the tile's world-space coordinates map to (0,0) of the FBO
+                    tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE), -(float)(row * TILE_SIZE) };
+                    tileCam.zoom = doc->renderScale;
+
+                    BeginMode2D(tileCam);
+                    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+
+
+                    //TODO: only draw strokes that intersect this tile's AABB)
+                    for(int i = 0; i < activeLayer->strokeCount; i++){
+                        RenderStroke(*doc, &activeLayer->strokes[i], 0);
+                    }
+
+                    EndBlendMode();
+                    EndMode2D();
+                    EndTextureMode();
+                }
             }
-            BeginTextureMode(activeLayer->texture);
-            ClearBackground(BLANK);
-            Camera2D bakeCam = {0};
-            bakeCam.zoom = doc->renderScale;
-            BeginMode2D(bakeCam);
-            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-            for(int i = 0; i < activeLayer->strokeCount; i++){
-                RenderStroke(*doc, &activeLayer->strokes[i], 0);
-            }
-            EndBlendMode();
-            EndMode2D();
-            EndTextureMode();
         }
     } else{
 

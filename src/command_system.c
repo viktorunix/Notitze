@@ -93,17 +93,7 @@ void UndoCommand(Document *doc){
         layer->strokeCount++;
     }
     if(doc->useBakedRendering){
-        BeginTextureMode(layer->texture);
-        ClearBackground(BLANK);
-        Camera2D bakeCam = {0};
-        bakeCam.zoom = doc->renderScale;
-        BeginMode2D(bakeCam);
-        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-        for(int s = 0; s < layer->strokeCount; s++) {
-            RenderStroke(*doc, &layer->strokes[s], 0);
-        }
-        EndBlendMode();
-        EndMode2D();
-        EndTextureMode();
+        RebakeAllLayers(doc);
+        
     }
 }

@@ -2,6 +2,7 @@
 #define COMMAND_SYSTEM_H
 
 #include "document.h"
+#include "renderer.h"
 
 typedef enum{
     CMD_DRAW_STROKE = 0,

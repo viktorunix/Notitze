@@ -12,8 +12,7 @@ void InitRenderer(Document* doc);
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);
-void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset);
-
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera);
 void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        int draggedPage, float dragOffsetY,
                        Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos,

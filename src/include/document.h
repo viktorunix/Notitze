@@ -3,6 +3,13 @@
 #include "raylib.h"
 #include "brush.h"
 #include "paper.h"
+
+#define TILE_SIZE 512
+
+typedef struct Tile {
+    RenderTexture2D texture;
+    bool isAllocated;
+} Tile;
 typedef enum{
     STATE_MENU,
     STATE_EDITOR
@@ -30,11 +37,16 @@ typedef struct {
 } Stroke;
 
 typedef struct {
+    bool isVisible;
+
     Stroke *strokes;
     int strokeCount;
     int capacity;
-    bool isVisible;
-    RenderTexture2D texture;
+
+
+    Tile *tiles;
+    int gridCols;
+    int gridRows;
 } Layer;
 
 typedef struct {
