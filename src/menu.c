@@ -106,11 +106,11 @@ bool UpdateDrawMainMenu(Document *doc){
        if (selectedFormat == FORMAT_CUSTOM) {
             DrawText("Width:", mX + 20, mY + 180, 20, LIGHTGRAY);
             GUISlider((Rectangle){mX + 100, mY + 180, 200, 20}, &customW, 500.0f, 4000.0f);
-            DrawText(TextFormat("%.0f", customW), mX + 320, mY + 220, 18, WHITE);
+            DrawText(TextFormat("%.0f", customW), mX + 320, mY + 180, 20, WHITE);
 
-            DrawText("Height:", mX + 20, mY + 160, 20, LIGHTGRAY);
-            GUISlider((Rectangle){mX + 100, mY + 160, 200, 20}, &customH, 500.0f, 4000.0f);
-            DrawText(TextFormat("%.0f", customH), mX + 320, mY + 160, 18, WHITE);
+            DrawText("Height:", mX + 20, mY + 240, 20, LIGHTGRAY);
+            GUISlider((Rectangle){mX + 100, mY + 240, 200, 20}, &customH, 500.0f, 4000.0f);
+            DrawText(TextFormat("%.0f", customH), mX + 320, mY + 240, 20, WHITE);
        }else {
             // Display Standard Sizes
             float w = 0, h = 0;
@@ -136,7 +136,7 @@ bool UpdateDrawMainMenu(Document *doc){
             FreeDocument(doc);
             Document *tempDoc = CreateEmptyDocument();
             *doc = *tempDoc;
-            
+
             doc->brushTex = tempBrush;
             doc->pencilTex = tempPencil;
 
