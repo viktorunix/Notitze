@@ -265,7 +265,10 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
 
 
     curX +=120 + gap;
-    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Home", false)) return true;
+    if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Home", false)){
+        SaveToNotebook("Library.ntzbook", doc);
+        return true;
+    }
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);
     curX += 70 + gap;
