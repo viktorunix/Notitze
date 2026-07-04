@@ -59,7 +59,7 @@ void PushEraseCommand(int page, int layer, Stroke *stroke, int index){
     cmd.layerIndex = layer;
     cmd.strokeIndex = index;
     DeepCopyStroke(&cmd.strokeData, stroke);
-    
+
     undoStack[undoTop++] = cmd;
 }
 
@@ -93,7 +93,50 @@ void UndoCommand(Document *doc){
         layer->strokeCount++;
     }
     if(doc->useBakedRendering){
-        RebakeAllLayers(doc);
-        
+        if(doc->useBakedRendering && layer->tiles != NULL){
+
+            StrokeAABB bounds = CalculateStrokeAABB(&cmd.strokeData);
+
+            int startCol = (int)floor((bounds.minX * doc->renderScale) / TILE_SIZE);
+            int endCol = (int)floor((bounds.maxX * doc->renderScale) / TILE_SIZE);
+            int startRow = (int)floor((bounds.minY * doc->renderScale) / TILE_SIZE);
+            int endRow = (int)floor((bounds.maxY * doc->renderScale) / TILE_SIZE);
+
+            if (startCol < 0) startCol = 0;
+            if (startRow < 0) startRow = 0;
+            if (endCol >= layer->gridCols) endCol = layer->gridCols - 1;
+            if (endRow >= layer->gridRows) endRow = layer->gridRows - 1;
+
+            for (int row = startRow; row <= endRow; row++) {
+                for (int col = startCol; col <= endCol; col++) {
+                    int tileIndex = (row * layer->gridCols) + col;
+                    Tile *tile = &layer->tiles[tileIndex];
+
+                    if (!tile->isAllocated) {
+                        tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
+                        SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_POINT);
+                        tile->isAllocated = true;
+                    }
+
+                    BeginTextureMode(tile->texture);
+                    ClearBackground(BLANK);
+
+                    Camera2D tileCam = {0};
+                    tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE), -(float)(row * TILE_SIZE) };
+                    tileCam.zoom = doc->renderScale;
+
+                    BeginMode2D(tileCam);
+                    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+
+                    for(int s = 0; s < layer->strokeCount; s++) {
+                        RenderStroke(*doc, &layer->strokes[s], 0);
+                    }
+
+                    EndBlendMode();
+                    EndMode2D();
+                    EndTextureMode();
+                }
+            }
+        }
     }
 }
