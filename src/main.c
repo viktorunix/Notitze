@@ -56,6 +56,18 @@ int main(void){
     settings.pallete = (Color*)malloc(5 * sizeof(Color));
     Color p[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
     memcpy(settings.pallete, p, 5 * sizeof(Color));
+
+    settings.currentBrushThicknesses = (float*)malloc(BRUSH_NUMBER * sizeof(float));
+    settings.currentBrushColors = (int*)malloc(BRUSH_NUMBER * sizeof(int));
+
+    for(int i = 0; i < BRUSH_NUMBER; i++){
+        settings.currentBrushThicknesses[i] = 5.0f;
+        settings.currentBrushColors[i] = 0;
+    }
+    settings.currentBrushThicknessIndex = 0;
+    settings.currentBrushColorsIndex = 0;
+
+
     settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
     BindState listeningForBind = BIND_NONE;
 
@@ -115,8 +127,12 @@ int main(void){
              }
 
              currentBrushColor = pallete[settings.selectedColorIndex];
-             currentBrushThickness = settings.currentBrushThickness;
+
              SetActiveBrush(doc->activeBrush);
+             settings.currentBrushThicknessIndex = doc->activeBrush;
+             settings.currentBrushColorsIndex = doc->activeBrush;
+             currentBrushThickness = settings.currentBrushThicknesses[settings.currentBrushThicknessIndex];
+             currentBrushColor = settings.pallete[settings.currentBrushColors[settings.currentBrushColorsIndex]];
 
              UpdateViewportMath(&vp, doc, mousePos, guiClicked);
 

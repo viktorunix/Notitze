@@ -2,7 +2,7 @@
 #define SETTINGS
 #include "raylib.h"
 #include "document.h"
-
+#define BRUSH_NUMBER 8
 typedef enum{
     BIND_NONE = 0,
     BIND_PEN,
@@ -29,6 +29,11 @@ typedef struct {
     float currentBrushThickness;
 
     Color *pallete;
+    float *currentBrushThicknesses;
+    int currentBrushThicknessIndex;
+
+    int *currentBrushColors;
+    int currentBrushColorsIndex;
 
 } Settings;
 const char* KeyToString(int key);

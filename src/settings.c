@@ -244,10 +244,10 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     for(int i = 0; i < 5; i++){
         Vector2 center = {curX + 20, curY + btnH / 2.0f};
         if(!settings->showSettings * IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            if(CheckCollisionPointCircle(mousePos, center, 20.0f)) settings->selectedColorIndex = i;
+            if(CheckCollisionPointCircle(mousePos, center, 20.0f)) settings->currentBrushColors[settings->currentBrushColorsIndex] = i;
 
         }
-        if(i == settings->selectedColorIndex) DrawCircleV(center, 24, WHITE);
+        if(i == settings->currentBrushColors[settings->currentBrushColorsIndex]) DrawCircleV(center, 24, WHITE);
         DrawCircleV(center, 20, settings->pallete[i]);
         DrawCircleLines(center.x, center.y, 20, (Color){0,0,0,100});
         curX+=45;
@@ -261,7 +261,7 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
 
     DrawText("Brush Size", curX , curY , 20, LIGHTGRAY);
     //curX += 110 + gap;
-    GUISlider((Rectangle){curX, curY + 30, 100, 16}, &settings->currentBrushThickness, 1.0f, 99.0f);
+    GUISlider((Rectangle){curX, curY + 30, 100, 16}, &settings->currentBrushThicknesses[settings->currentBrushThicknessIndex], 1.0f, 99.0f);
 
 
     curX +=120 + gap;
