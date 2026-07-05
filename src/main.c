@@ -76,7 +76,11 @@ int main(void){
     camera.offset = (Vector2){ (GetScreenWidth() - doc->pageWidth) / 2.0f, 50.0f};
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
-    SetTargetFPS(120);
+
+    int frameSinceLastActivity = 0;
+    const int idleFPS = 15;
+    const int activeFPS = 120;
+    //SetTargetFPS(120);
 
 
     int barWidth = 1000;
@@ -93,6 +97,22 @@ int main(void){
     AppState appState = STATE_MENU;
     InitMainMenu();
     while(!WindowShouldClose()){
+        bool hardwareActivity = (
+            GetMouseDelta().x != 0.0f || GetMouseDelta().y !=0.0f ||
+            GetMouseWheelMove() != 0.0f ||
+            GetKeyPressed() !=0 || GetCharPressed() !=0 ||
+            IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ||
+            IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) ||
+            doc->isDrawing || draggedPage != -1 || settings.showSettings
+        );
+        if(hardwareActivity){
+            frameSinceLastActivity = 0;
+            SetTargetFPS(activeFPS);
+        } else{
+            frameSinceLastActivity++;
+            if(frameSinceLastActivity > activeFPS)
+                SetTargetFPS(idleFPS);
+        }
 
         if(appState == STATE_MENU){
             BeginDrawing();
