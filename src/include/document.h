@@ -34,6 +34,9 @@ typedef struct {
     float thickness;
     BrushType type;
     char text[128];
+
+    StrokeAABB bounds;
+    bool hasBounds;
 } Stroke;
 
 typedef struct {

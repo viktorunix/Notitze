@@ -2,6 +2,8 @@
 #include "include/raylib.h"
 
 StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
+    if(stroke->hasBounds)
+        return stroke->bounds;
     StrokeAABB box = {999999.0f, 999999.0f, -999999.0f, -999999.0f};
 
     if(stroke->type == BRUSH_TEXT && stroke->pointCount > 0){
@@ -31,6 +33,8 @@ StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
     box.maxX += padding;
     box.maxY += padding;
 
+    stroke->bounds = box;
+    stroke->hasBounds = true;
     return box;
 }
 Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
