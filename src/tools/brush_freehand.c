@@ -39,12 +39,13 @@ static void FreeHand_OnDrag(Document *doc, Vector2 pos, float pressure){
     }
     #elif defined(__linux__)
 
+    const float MIN_DISTANCE = 2.0f;
+
     if(currentStroke.pointCount > 0){
         Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
         float dist = Vector2Distance(pos,lastPoint);
-
+        if(dist < MIN_DISTANCE) return;
         float stepSize = 2.0f;
-
         if(dist >= stepSize){
             int steps = (int)(dist/stepSize);
 

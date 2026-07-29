@@ -51,7 +51,8 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
                     int tileIndex = (row * activeLayer->gridCols) + col;
                     Tile *tile = &activeLayer->tiles[tileIndex];
 
-
+                    int newStrokeIndex = activeLayer->strokeCount - 1;
+                    AddStrokeToTile(tile, newStrokeIndex);
                     if (!tile->isAllocated) {
                         tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
                         SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_POINT);

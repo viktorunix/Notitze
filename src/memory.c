@@ -83,6 +83,8 @@ void FreeLayer(Layer *layer) {
             if (layer->tiles[i].isAllocated) {
                 UnloadRenderTexture(layer->tiles[i].texture);
             }
+            if(layer->tiles[i].strokeIndices)
+                free(layer->tiles[i].strokeIndices);
         }
         free(layer->tiles);
         layer->tiles = NULL;
@@ -147,4 +149,34 @@ void RemoveStrokeFromLayer(Layer *layer, int index){
         layer->strokes[i] = layer->strokes[i + 1];
     layer->strokeCount--;
 
+    if(layer->tiles){
+        int totalTiles = layer->gridCols * layer->gridRows;
+        for(int t = 0; t < totalTiles; t++){
+            Tile *tile = &layer->tiles[t];
+            for(int i = 0; i < tile->strokeCount; i++){
+                if(tile->strokeIndices[i] == index){
+                    for(int j = i; j < tile->strokeCount - 1; j++){
+                        tile->strokeIndices[j] = tile->strokeIndices[j + 1];
+                    }
+                    tile->strokeCount--;
+                    i--;
+                }
+                else if(tile->strokeIndices[i] > index){
+                    tile->strokeIndices[i]--;
+                }
+            }
+        }
+    }
+
+}
+void AddStrokeToTile(Tile *tile, int strokeIndex){
+    //prevent duplicate registrations
+    for(int i = 0; i < tile->strokeCount; i++){
+        if(tile->strokeIndices[i] == strokeIndex) return;
+    }
+    if(tile->strokeCount >= tile->capacity){
+        tile->capacity = tile->capacity == 0 ? 8 : tile->capacity * 2;
+        tile->strokeIndices = (int *)realloc(tile->strokeIndices, tile->capacity * sizeof(int));
+    }
+    tile->strokeIndices[tile->strokeCount++] = strokeIndex;
 }

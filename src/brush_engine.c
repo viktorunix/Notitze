@@ -64,7 +64,7 @@ void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pC
             float thick = stroke->thickness * pressure;
             thick = fmaxf(thick * 0.05f, 0.5f);
 
-            float spacing = fmaxf(thick * 0.1f, 1.0f);
+            float spacing = fmaxf(thick * 0.05f, 0.25f);
             float dist = Vector2Distance(p1,p2);
             Vector2 dir = Vector2Normalize(Vector2Subtract(p2, p1));
             for(float d = 0; d < dist; d += spacing){
@@ -93,7 +93,7 @@ void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pC
 
             float startPressure = doc.pressureEnabled ? p1.pressure : 1.0f;
             float baseThickness = fmaxf(stroke->thickness * startPressure, 0.5f);
-            float spacing = fmaxf(baseThickness * 0.05f, 0.5f);
+            float spacing = fmaxf(baseThickness * 0.05f, 0.25f);
 
             for(float d = 0; d < segDist; d += spacing){
                 float t = d/ segDist;

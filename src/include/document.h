@@ -4,11 +4,19 @@
 #include "brush.h"
 #include "paper.h"
 
+
 #define TILE_SIZE 512
+typedef struct {
+    float minX, minY, maxX, maxY;
+} StrokeAABB;
 
 typedef struct Tile {
     RenderTexture2D texture;
     bool isAllocated;
+
+    int *strokeIndices;
+    int strokeCount;
+    int capacity;
 } Tile;
 typedef enum{
     STATE_MENU,

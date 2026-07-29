@@ -14,4 +14,5 @@ void FreeDocument(Document *doc);
 void DeleteActivePage(Document *doc);
 void DeleteActiveLayer(Page *page);
 void RemoveStrokeFromLayer(Layer *layer, int index);
+void AddStrokeToTile(Tile *tile, int strokeIndex);
 #endif

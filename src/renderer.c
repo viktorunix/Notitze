@@ -1,6 +1,7 @@
 #include "include/renderer.h"
 #include "include/document.h"
 #include "include/file_saving.h"
+#include "include/raylib.h"
 #include "include/raymath.h"
 #include "include/gui.h"
 #include "include/brush_system.h"
@@ -8,9 +9,40 @@
 #define PAGE_GAP 60
 
 extern Stroke currentStroke;
+Texture2D GenerateSmoothBrush(void){
+    int size = 128;
+    Image img = GenImageColor(size, size, BLANK);
+    float center = size/ 2.0f;
+    float radius = center - 2.0f;
+    float feather = 20.0f;
+    float solidRadius = center - feather;
+    for(int y = 0; y < size; y++){
+        for(int x = 0; x < size; x++){
+            float dx = (float)x - center;
+            float dy = (float)y - center;
+            float dist = sqrtf(dx * dx + dy * dy);
+            float alpha = 1.0f;
+            if(dist > solidRadius){
+                alpha = 1.0f - ((dist - solidRadius) / feather);
+            }
+            if(alpha > 1.0f) alpha = 1.0f;
+            if(alpha < 0.005f) alpha = 0.0f;
+            alpha = alpha * alpha * (3.0f - 2.0f * alpha);
 
+            unsigned char a = (unsigned char)(alpha *255);
+            Color c = {a,a,a,a};
+            ImageDrawPixel(&img, x, y, c);
+        }
+    }
+    Texture2D tex = LoadTextureFromImage(img);
+    GenTextureMipmaps(&tex);
+    SetTextureFilter(tex, TEXTURE_FILTER_TRILINEAR);
+    UnloadImage(img);
+    return tex;
+}
 void InitRenderer(Document* doc) {
-    Image brushImage = GenImageColor(256, 256, BLANK);
+    Texture2D softBrushTex = GenerateSmoothBrush();
+    /*Image brushImage = GenImageColor(256, 256, BLANK);
     for(int y = 0; y < 256; y++){
         for(int x = 0; x < 256; x++){
             float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
@@ -27,6 +59,7 @@ void InitRenderer(Document* doc) {
     Texture2D softBrushTex = LoadTextureFromImage(brushImage);
     UnloadImage(brushImage);
     SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
+    */
     doc->brushTex = softBrushTex;
     CacheTexture("penBrush", softBrushTex);
     Image pencilImage = GenImageColor(256, 256, BLANK);
@@ -203,9 +236,10 @@ void RebakeAllLayers(Document *doc) {
                         int tileIndex = (row * layer->gridCols) + col;
                         Tile *tile = &layer->tiles[tileIndex];
 
+                        AddStrokeToTile(tile, s);
                         if (!tile->isAllocated) {
                             tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
-                            SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_POINT);
+                            SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_TRILINEAR);
                             tile->isAllocated = true;
 
                             // Initialize with blank background
@@ -226,6 +260,7 @@ void RebakeAllLayers(Document *doc) {
                         EndBlendMode();
                         EndMode2D();
                         EndTextureMode();
+                        GenTextureMipmaps(&tile->texture.texture);
                     }
                 }
             }
@@ -243,7 +278,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     for(int l = 0; l < page->layerCount; l++) {
         Layer *layer = &page->layers[l];
         if(!layer->isVisible) continue;
-        if(doc->useBakedRendering && layer->tiles != NULL) {
+        if(doc->useBakedRendering && layer->tiles != NULL && camera.zoom >=0.6f) {
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
 
             float logicalTileSize = TILE_SIZE / doc->renderScale;
@@ -304,9 +339,11 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
             EndBlendMode();
         } else {
             //live rendering fallback
+            BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0; i < layer->strokeCount; i++){
                 RenderStroke(*doc, &layer->strokes[i], pageYOffset);
             }
+            EndBlendMode();
         }
 
         //render the active stroke
@@ -391,7 +428,7 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                         if (exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
                         if (exactY + exactH > doc->pageHeight) exactH = doc->pageHeight - exactY;
 
-                        Rectangle dest = { exactX, exactY, exactW + 0.75f, exactH + 0.75f };
+                        Rectangle dest = { exactX, exactY, exactW + 0.5f, exactH + 0.5f };
 
                         float srcW = exactW * doc->renderScale;
                         float srcH = exactH * doc->renderScale;
