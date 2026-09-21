@@ -116,7 +116,6 @@ void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pC
         float endPressure = doc.pressureEnabled ? stroke->points[stroke->pointCount - 1].pressure : 1.0f;
         float endThick = stroke->thickness * endPressure;
         endThick = fmaxf(endThick, 0.5f);
-        //DrawCircleV(last, endThick/ 2.0f, pColor);
 
         Rectangle source = {0,0, (float)doc.brushTex.width, (float)doc.brushTex.height};
         Rectangle destination = {last.x, last.y, endThick, endThick};

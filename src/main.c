@@ -37,7 +37,7 @@ int main(void){
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
     InitWaylandTablet();
-    //InitTabletSupport();
+
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
 

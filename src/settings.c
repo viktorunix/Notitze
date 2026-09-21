@@ -190,16 +190,11 @@ bool LoadSettings(Settings *settings){
     }
 
     bytes_read = fread(&settings->binds, sizeof(Keybinds), 1, file);
-    //printf("daaa\n");
     bytes_read = fread(&settings->showSettings, sizeof(bool), 1, file);
     bytes_read = fread(&settings->selectedColorIndex, sizeof(int), 1, file);
     bytes_read = fread(&settings->currentBrushThickness, sizeof(float),1, file);
-    printf("daaa\n");
     settings->pallete = (Color *)malloc(5 * sizeof(Color));
     bytes_read = fread(settings->pallete, sizeof(Color), 5, file);
-    printf("daaa\n");
-
-    printf("%c\n", settings->pallete[2].a);
     fclose(file);
     return true;
 
@@ -260,7 +255,6 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curY = barY + 15 + btnH + 15;
 
     DrawText("Brush Size", curX , curY , 20, LIGHTGRAY);
-    //curX += 110 + gap;
     GUISlider((Rectangle){curX, curY + 30, 100, 16}, &settings->currentBrushThicknesses[settings->currentBrushThicknessIndex], 1.0f, 99.0f);
 
 

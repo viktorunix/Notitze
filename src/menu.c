@@ -126,10 +126,6 @@ bool UpdateDrawMainMenu(Document *doc){
         if (GUIButton((Rectangle){mX + 210, mY + mHeight - 60, 170, 40}, "Create", false)) {
             showNewModal = false; // Close modal
 
-            //extern void FreeDocument(Document *doc);
-            //extern void AddPageToDocument(Document *doc);
-
-
             Texture2D tempBrush = doc->brushTex;
             Texture2D tempPencil = doc->pencilTex;
 
@@ -146,17 +142,6 @@ bool UpdateDrawMainMenu(Document *doc){
             else if (selectedFormat == FORMAT_LETTER) { doc->pageWidth = 1275.0f; doc->pageHeight = 1650.0f; doc->pageFormat = FORMAT_LETTER; }
             else { doc->pageWidth = customW; doc->pageHeight = customH; doc->pageFormat = FORMAT_CUSTOM; }
 
-            //doc->ppi = 150;
-            //doc->pattern = BG_BLANK;
-            //doc->patternSpacing = 30.0f;
-            //doc->patternColor = (Color){200, 215, 230, 255};
-            //doc->renderScale = 2.0f;
-
-            //doc->useBakedRendering = true;
-            //doc->pressureEnabled = true;
-            //doc->enableLayers = false;
-
-            //doc->notebookIndex = -1;
             if(strlen(newDocName) > 0){
                 snprintf(doc->documentTitle, sizeof(doc->documentTitle), "%s", newDocName);
             } else{

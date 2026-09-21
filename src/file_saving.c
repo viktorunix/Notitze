@@ -118,7 +118,6 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             doc->pageWidth = meta.w;
             doc->pageHeight = meta.h;
             doc->ppi = meta.ppi;
-            //doc->pageCount = meta.count;
             doc->pattern = meta.pattern;
             doc->enableLayers = meta.layers;
             doc->useBakedRendering = meta.baked;
@@ -270,7 +269,7 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
                 bytes_read = fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
                 layer->strokes[s] = stroke;
             }
-            
+
         }
     }
     if (doc->useBakedRendering) {
@@ -282,22 +281,7 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
 }
 
 const char *ShowSaveFileDialog(){
-#ifdef _WIN32
-    static char filename[MAX_PATH] = "";
-    OPENFILENAME ofn;
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";
-    ofn.lpstrFile = filename;
-    ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-    ofn.lpstrDefExt = "ntz";
 
-    if(GetSaveFileName(&ofn)){
-        return filename;
-    }
-#elif defined(__linux__)
     static char filename[1024] = "";
     filename[0] = '\0'; // Wipe ghost paths
 
@@ -332,24 +316,9 @@ const char *ShowSaveFileDialog(){
         return filename;
     }
     return NULL;
-#endif
-    return NULL;
 }
 
 const char* ShowOpenFileDialog() {
-#ifdef _WIN32
-    static char filename[MAX_PATH] = "";
-    OPENFILENAMEA ofn;
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFilter = "Notitze Files (*.ntz)\0*.ntz\0All Files (*.*)\0*.*\0";    ofn.lpstrFile = filename;
-    ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-    ofn.lpstrDefExt = "ntz";
-
-    if (GetOpenFileNameA(&ofn)) return filename;
-#elif defined(__linux__)
     static char filename[1024] = "";
     filename[0] = '\0'; // Wipe ghost paths
 
@@ -373,9 +342,6 @@ const char* ShowOpenFileDialog() {
     if (strlen(filename) > 0) {
         return filename;
     }
-    return NULL;
-
-#endif
     return NULL;
 }
 

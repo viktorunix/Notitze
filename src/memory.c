@@ -118,15 +118,7 @@ void DeleteActiveLayer(Page *page){
     if(page->activeLayer >= page->layerCount)
         page->activeLayer = page->layerCount - 1;
 }
-/*
-void FreeDocument(Document *doc){
-    for(int p = 0; p < doc->pageCount; p++)
-        FreePage(&doc->pages[p]);
-    free(doc->pages);
-    *doc = (Document){0};
 
-}
-    */
 void FreeDocument(Document *doc){
     if(!doc) return;
     for(int p = 0; p < doc->pageCount; p++)

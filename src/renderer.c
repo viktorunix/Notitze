@@ -43,24 +43,6 @@ Texture2D GenerateSmoothBrush(void){
 }
 void InitRenderer(Document* doc) {
     Texture2D softBrushTex = GenerateSmoothBrush();
-    /*Image brushImage = GenImageColor(256, 256, BLANK);
-    for(int y = 0; y < 256; y++){
-        for(int x = 0; x < 256; x++){
-            float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
-            if(dist <= 126.0f){
-                ImageDrawPixel(&brushImage, x, y, WHITE);
-            } else if(dist <= 128.0f){
-                float alpha = (128.0f - dist) / 2.0f;
-                unsigned char aVal = (unsigned char)(alpha * 255.0f);
-                Color c = {aVal, aVal, aVal, aVal};
-                ImageDrawPixel(&brushImage, x, y, c);
-            }
-        }
-    }
-    Texture2D softBrushTex = LoadTextureFromImage(brushImage);
-    UnloadImage(brushImage);
-    SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
-    */
     doc->brushTex = softBrushTex;
     CacheTexture("penBrush", softBrushTex);
     Image pencilImage = GenImageColor(256, 256, BLANK);
@@ -365,7 +347,6 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
 
     Rectangle deletePageBounds = {doc->pageWidth + 10, pageYOffset + 10, 50, 50};
-    printf("%b\n",GUIButton(deletePageBounds, "-", false));
 }
 void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        int draggedPage, float dragOffsetY,
