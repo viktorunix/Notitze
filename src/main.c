@@ -1,7 +1,7 @@
+#define _POSIX_C_SOURCE 200112L
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "include/raylib.h"
 #include "include/raylib.h"
 #include "include/document.h"
 #include "include/memory.h"
@@ -17,16 +17,17 @@
 #include "include/doc_management.h"
 #include "include/menu.h"
 
+#include "include/tablet_wayland.h"
+
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
-
-
 
 Stroke currentStroke = {0};
 Color currentBrushColor = BLACK;
 float currentBrushThickness = 3.0f;
 
 int main(void){
+    setenv("GLFW_PLATFORM", "wayland", 1);
     InitCommandSystem();
     InitBrushSystem();
     RegisterBrushes();
@@ -36,18 +37,18 @@ int main(void){
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Notitze");
-    InitTabletSupport();
+    InitWaylandTablet();
+    //InitTabletSupport();
     SetExitKey(KEY_NULL);
     SetWindowMinSize(800, 600);
+
     Document *doc = CreateEmptyDocument();
-    int draggedPage=  -1;
-    float dragOffsetY= 0.0f;
+    int draggedPage = -1;
+    float dragOffsetY = 0.0f;
     Viewport vp = {0};
     InitViewport(&vp, doc->pageWidth);
 
     Color pallete[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
-
-
 
     Settings settings = {0};
     settings.showSettings = false;
@@ -67,7 +68,6 @@ int main(void){
     settings.currentBrushThicknessIndex = 0;
     settings.currentBrushColorsIndex = 0;
 
-
     settings.binds = (Keybinds){KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_S, KEY_L, KEY_U, KEY_DELETE};
     BindState listeningForBind = BIND_NONE;
 
@@ -80,14 +80,11 @@ int main(void){
     int frameSinceLastActivity = 0;
     const int idleFPS = 15;
     const int activeFPS = 120;
-    //SetTargetFPS(120);
-
 
     int barWidth = 1000;
     int barHeight = 140;
     int barY = 20;
     LoadSettings(&settings);
-
 
     float currentPressure = 1.0f;
     bool isStartup = true;
@@ -96,19 +93,25 @@ int main(void){
 
     AppState appState = STATE_MENU;
     InitMainMenu();
+
     while(!WindowShouldClose()){
+        PollWaylandTablet();
+
+        // Ensure FPS doesn't drop to 15 while actively hovering or drawing with the tablet
         bool hardwareActivity = (
             GetMouseDelta().x != 0.0f || GetMouseDelta().y !=0.0f ||
             GetMouseWheelMove() != 0.0f ||
             GetKeyPressed() !=0 || GetCharPressed() !=0 ||
             IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ||
             IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) ||
-            doc->isDrawing || draggedPage != -1 || settings.showSettings
+            doc->isDrawing || draggedPage != -1 || settings.showSettings ||
+            tabletState.isHovering || tabletState.isDown
         );
+
         if(hardwareActivity){
             frameSinceLastActivity = 0;
             SetTargetFPS(activeFPS);
-        } else{
+        } else {
             frameSinceLastActivity++;
             if(frameSinceLastActivity > activeFPS)
                 SetTargetFPS(idleFPS);
@@ -122,20 +125,36 @@ int main(void){
             }
             EndDrawing();
         }
-        else{
+        else {
+             // 1. Abstract Mouse vs Tablet coordinates and pressure
+            Vector2 mousePos = GetMousePosition();
+            currentPressure = 1.0f;
 
-             Vector2 mousePos = GetMousePosition();
+            if (tabletState.isHovering) {
+                              // SAFEGUARD: Don't override until Wayland sends real coordinates
+                if (tabletState.x != 0.0f || tabletState.y != 0.0f) {
+                    mousePos.x = tabletState.x;
+                    mousePos.y = tabletState.y;
+                }
+            currentPressure = tabletState.pressure;
+            HideCursor();
+            } else {
+                ShowCursor();
+            }
+
              Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
 
              int barX = (GetScreenWidth() - barWidth / 2);
              Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
              bool guiClicked = settings.showSettings;
              bool layerHovered = false;
+
              if(doc->enableLayers && !settings.showSettings){
                  int pH = 60 + (doc->pages[doc->activePage].layerCount * 40) + (doc->pages[doc->activePage].layerCount > 1 ? 50 : 0);
                  Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
                  layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
              }
+
              bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
              guiClicked = settings.showSettings || uiHovered;
              SettingsBinds(&listeningForBind, &settings);
@@ -156,11 +175,8 @@ int main(void){
 
              UpdateViewportMath(&vp, doc, mousePos, guiClicked);
 
+             // currentPressure dynamically feeds Wayland data to your drawing logic here
              ProcessInputs(doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
-
-
-
-
 
              RenderApplication(doc, &settings, vp.camera, draggedPage, dragOffsetY,
                       mousePos, vp.mouseWorldPos, vp.localMousePos,
@@ -171,8 +187,13 @@ int main(void){
             }
         }
     }
+
     SaveSettings(settings);
     FreeDocument(doc);
+
+    // 2. Safely destroy Wayland objects to prevent the Mutter crash/replug bug
+    CloseWaylandTablet();
+
     CloseWindow();
 
     return 0;

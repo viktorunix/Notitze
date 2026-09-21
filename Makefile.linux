@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O2 -I src/include -xc -std=c11
 LDFLAGS = -L src/lib
-LIBS = -l:libraylib.a -lm -lX11 -lGL -lpthread
+LIBS = -lX11 -l:libraylib.a   -lglfw -lwayland-client -lwayland-cursor -lwayland-egl -lxkbcommon -lGL -lm -lpthread
 
 SRC = $(wildcard src/*.c) $(wildcard src/tools/*.c)
 OBJ = $(patsubst src/%.c, build/%.o, $(patsubst src/tools/%.c, build/tools/%.o, $(SRC)))

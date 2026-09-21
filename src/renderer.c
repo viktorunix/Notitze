@@ -1,6 +1,7 @@
 #include "include/renderer.h"
 #include "include/document.h"
 #include "include/file_saving.h"
+#include "include/memory.h"
 #include "include/raylib.h"
 #include "include/raymath.h"
 #include "include/gui.h"
@@ -272,6 +273,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
 
+
     Page *page = &doc->pages[p];
 
     // 2. Render Layers
@@ -352,6 +354,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
             RenderStroke(*doc, currentStroke, pageYOffset);
             EndBlendMode();
         }
+
     }
 
     DrawRectangle(0, pageYOffset, doc->pageWidth, 40, (Color){200,200,200,255});
@@ -360,6 +363,9 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
     int borderThickness = (p == doc->activePage) ? 4 : 1;
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
+
+    Rectangle deletePageBounds = {doc->pageWidth + 10, pageYOffset + 10, 50, 50};
+    printf("%b\n",GUIButton(deletePageBounds, "-", false));
 }
 void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        int draggedPage, float dragOffsetY,
