@@ -1,7 +1,6 @@
 #include "include/input_manager.h"
 #include "include/brush_system.h"
 #include "include/doc_management.h"
-#include "include/tablet_support.h"
 #include "include/raymath.h"
 #include "include/tablet_wayland.h"
 

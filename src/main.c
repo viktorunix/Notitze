@@ -13,7 +13,6 @@
 #include "include/renderer.h"
 #include "include/viewport.h"
 #include "include/input_manager.h"
-#include "include/tablet_support.h"
 #include "include/doc_management.h"
 #include "include/menu.h"
 
