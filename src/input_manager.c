@@ -2,27 +2,16 @@
 #include "include/brush_system.h"
 #include "include/doc_management.h"
 #include "include/raymath.h"
-#include "include/tablet_wayland.h"
-
+#include "include/tablet_support.h"
 #define PAGE_GAP 60
+
 
 extern Stroke currentStroke;
 
-// Track the previous frame state to detect exact press/release moments
-static bool previousTabletDown = false;
-
 void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPage, float* dragOffsetY, float* currentPressure) {
 
-    // Unified Input States
-    bool isPointerDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || tabletState.isDown;
-    bool isPointerPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || (tabletState.isDown && !previousTabletDown);
-    bool isPointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || (!tabletState.isDown && previousTabletDown);
 
-    // Save state for the next frame
-    previousTabletDown = tabletState.isDown;
-
-    // CRITICAL: Use isPointerPressed here so OnPress is only called ONCE per stroke
-    if (isPointerPressed && !guiClicked) {
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked) {
         if (vp->isMouseInsideCanvas) {
             doc->activePage = vp->hoveredPage;
 
@@ -30,6 +19,7 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
                 *draggedPage = vp->hoveredPage;
                 *dragOffsetY = vp->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
             } else {
+                *currentPressure = GetTabletPressure();
                 GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure);
             }
         } else {
@@ -37,14 +27,16 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         }
     }
 
+
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         vp->isPanning = true;
     }
 
+
     if (*draggedPage != -1) {
-        // Dragging a page header...
+        // Dragging a page header... (Handled visually by the renderer)
     }
-    else if (doc->isDrawing && isPointerDown) {
+    else if (doc->isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         float clampedX = vp->mouseWorldPos.x;
         if (clampedX < 0.0f) clampedX = 0.0f;
         if (clampedX > doc->pageWidth) clampedX = doc->pageWidth;
@@ -53,8 +45,11 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
         Vector2 clampedPos = {clampedX, clampedY};
-
-        // Use the native Wayland pressure variable passed from main.c
+        if(IsUsingTablet()){
+            *currentPressure = GetTabletPressure();
+        } else{
+            *currentPressure = 1;
+        }
         GetActiveBrush()->OnDrag(doc, clampedPos, *currentPressure);
 
         if (!vp->isMouseInsideCanvas) {
@@ -65,8 +60,7 @@ void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPag
         ApplyPanning(vp);
     }
 
-    // Trigger release using the unified pointer release check
-    if (isPointerReleased || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
         if (*draggedPage != -1) {
             int dropIndex = (int)(vp->mouseWorldPos.y / (doc->pageHeight + PAGE_GAP));
             MovePageToIndex(doc, *draggedPage, dropIndex);
