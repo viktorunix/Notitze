@@ -4,14 +4,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #define MAX_PATH 1024
+
 static void WriteChunk(FILE *file, const char tag[4], void *data, uint32_t size){
     fwrite(tag,1,4,file);
     fwrite(&size, sizeof(uint32_t),1,file);
     if(size > 0 && data != NULL)
         fwrite(data,1,size,file);
 }
-void SaveDocumentBinary(const char *filename, Document *doc){
 
+void SaveDocumentBinary(const char *filename, Document *doc){
     FILE *file = fopen(filename, "wb");
     if(!file) return;
 
@@ -68,9 +69,7 @@ void SaveDocumentBinary(const char *filename, Document *doc){
     fclose(file);
 }
 
-
 bool LoadDocumentBinary(const char *filename, Document *doc){
-
     int totalLayers = 0;
     FILE *file = fopen(filename, "rb");
     if(!file) return false;
@@ -118,14 +117,11 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             doc->pageWidth = meta.w;
             doc->pageHeight = meta.h;
             doc->ppi = meta.ppi;
-            //doc->pageCount = meta.count;
             doc->pattern = meta.pattern;
             doc->enableLayers = meta.layers;
             doc->useBakedRendering = meta.baked;
             doc->pressureEnabled = meta.pressure;
             doc->renderScale = meta.scale;
-
-
         }
         else if(strcmp(tag, "BKGD") == 0){
             struct {Color c; float s;} meta;
@@ -161,7 +157,9 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentLayer->capacity = 0;
             currentLayer->tiles = NULL;
             currentLayer->gridCols = 0;
-            currentLayer->gridRows = 0;      struct {bool isVisible; int strokeCount;} meta;
+            currentLayer->gridRows = 0;      
+            
+            struct {bool isVisible; int strokeCount;} meta;
             bytes_read = fread(&meta, sizeof(meta), 1, file);
             currentLayer->isVisible = meta.isVisible;
 
@@ -186,8 +184,10 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
 
             currentStroke->capacity = meta.pointCount;
             currentStroke->points = NULL;
+            
+            // Aceasta linie asigura recacularea bounds-urilor (AABB) si prevenirea coruperii memoriei
+            currentStroke->hasBounds = false; 
 
-            currentStroke->hasBounds = false;
             currentLayer->strokeCount++;
         }
         else if(strcmp(tag, "STRP") == 0){
@@ -200,18 +200,15 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
         fseek(file, chunkEnd, SEEK_SET);
     }
 
-    int loadedLayers = 0;
     if (doc->useBakedRendering) {
         RebakeAllLayers(doc);
     }
     doc->activePage = 0;
-    printf("Layers: %d\n", totalLayers);
     fclose(file);
     return true;
 }
+
 bool LoadLegacyNTZ2(FILE *file, Document *doc){
-
-
     size_t bytes_read;
     bytes_read = fread(&doc->pageWidth, sizeof(float),1,file);
     bytes_read = fread(&doc->pageHeight, sizeof(float), 1, file);
@@ -222,12 +219,8 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
     bytes_read = fread(&doc->pattern, sizeof(int),1,file);
     bytes_read = fread(&doc->enableLayers, sizeof(bool),1,file);
 
-
     bytes_read = fread(&doc->useBakedRendering, sizeof(bool),1,file);
     bytes_read = fread(&doc->renderScale, sizeof(float), 1, file);
-
-
-
 
     bytes_read = fread(&doc->pressureEnabled, sizeof(bool),1,file);
 
@@ -269,9 +262,11 @@ bool LoadLegacyNTZ2(FILE *file, Document *doc){
                 stroke.capacity = stroke.pointCount;
                 stroke.points = (StrokePoint *)malloc(stroke.capacity * sizeof(StrokePoint));
                 bytes_read = fread(stroke.points, sizeof(StrokePoint), stroke.pointCount, file);
+                
+                stroke.hasBounds = false; // Fix și aici
+                
                 layer->strokes[s] = stroke;
             }
-            
         }
     }
     if (doc->useBakedRendering) {
@@ -300,30 +295,24 @@ const char *ShowSaveFileDialog(){
     }
 #elif defined(__linux__)
     static char filename[1024] = "";
-    filename[0] = '\0'; // Wipe ghost paths
-
-    // 1. Run zenity via system() which forces the program to completely FREEZE and wait.
-    // We output the file selection to a temporary hidden file in /tmp/
+    filename[0] = '\0';
     int status = system("zenity --file-selection --save --confirm-overwrite --title=\"Save Document\" --file-filter=\"*.ntz\" > /tmp/ntz_save_path.tmp 2>/dev/null");
 
-    // WIFEXITED and WEXITSTATUS check if the user clicked "Cancel" or closed the window (returns non-zero status)
     if (status != 0) {
         remove("/tmp/ntz_save_path.tmp");
         return NULL;
     }
 
-    // 2. Read the selected path back from our temporary file
     FILE *f = fopen("/tmp/ntz_save_path.tmp", "r");
     if (f) {
         if (fgets(filename, sizeof(filename), f) != NULL) {
-            filename[strcspn(filename, "\n")] = '\0'; // Strip newline character
+            filename[strcspn(filename, "\n")] = '\0';
         }
         fclose(f);
-        remove("/tmp/ntz_save_path.tmp"); // Clean up temporary file
+        remove("/tmp/ntz_save_path.tmp");
     }
 
     if (strlen(filename) > 0) {
-        // Auto-append .ntz if you forgot to type it
         size_t len = strlen(filename);
         if (len > 0 && (len < 4 || strcmp(filename + len - 4, ".ntz") != 0)) {
             if (len + 5 < sizeof(filename)) {
@@ -352,9 +341,7 @@ const char* ShowOpenFileDialog() {
     if (GetOpenFileNameA(&ofn)) return filename;
 #elif defined(__linux__)
     static char filename[1024] = "";
-    filename[0] = '\0'; // Wipe ghost paths
-
-    // Freeze application and wait for selection
+    filename[0] = '\0';
     int status = system("zenity --file-selection --title=\"Open Document\" --file-filter=\"*.ntz\" > /tmp/ntz_open_path.tmp 2>/dev/null");
 
     if (status != 0) {
@@ -365,7 +352,7 @@ const char* ShowOpenFileDialog() {
     FILE *f = fopen("/tmp/ntz_open_path.tmp", "r");
     if (f) {
         if (fgets(filename, sizeof(filename), f) != NULL) {
-            filename[strcspn(filename, "\n")] = '\0'; // Strip newline
+            filename[strcspn(filename, "\n")] = '\0';
         }
         fclose(f);
         remove("/tmp/ntz_open_path.tmp");
@@ -379,7 +366,6 @@ const char* ShowOpenFileDialog() {
 #endif
     return NULL;
 }
-
 
 NotebookIndex ScanNotebook(const char *filename){
     size_t bytes_read;
@@ -536,41 +522,40 @@ void SaveToNotebook(const char *notebookPath, Document *doc){
         rename(rewritePath, notebookPath);
     } else {
         FILE *check = fopen(notebookPath, "rb");
-                bool exists = (check != NULL);
-                if (check) fclose(check);
+        bool exists = (check != NULL);
+        if (check) fclose(check);
 
+        FILE *nb = fopen(notebookPath, "ab");
+        if (!nb) {
+            fclose(temp);
+            remove(tempPath);
+            return;
+        }
 
-                FILE *nb = fopen(notebookPath, "ab");
-                if (!nb) {
-                    fclose(temp);
-                    remove(tempPath);
-                    return;
-                }
+        if (!exists) {
+            char magic[4] = "NTZB";
+            fwrite(magic, 1, 4, nb);
+        }
 
-                if (!exists) {
-                    char magic[4] = "NTZB";
-                    fwrite(magic, 1, 4, nb);
-                }
+        uint32_t titleLen = strlen(doc->documentTitle);
+        if(titleLen == 0){
+            strcpy(doc->documentTitle, "Untitled");
+            titleLen = 8;
+        }
+        WriteChunk(nb, "TITL", doc->documentTitle, titleLen);
 
-                uint32_t titleLen = strlen(doc->documentTitle);
-                if(titleLen == 0){
-                    strcpy(doc->documentTitle, "Untitled");
-                    titleLen = 8;
-                }
-                WriteChunk(nb, "TITL", doc->documentTitle, titleLen);
+        fwrite("FILE", 1,4, nb);
+        fwrite(&newFileSize, sizeof(uint32_t), 1, nb);
+        char buffer[4096];
+        while(!feof(temp)){
+            size_t bytes = fread(buffer, 1, sizeof(buffer), temp);
+            if(bytes > 0) fwrite(buffer, 1, bytes, nb);
+        }
+        fclose(nb);
+        fclose(temp);
+        remove(tempPath);
 
-                fwrite("FILE", 1,4, nb);
-                fwrite(&newFileSize, sizeof(uint32_t), 1, nb);
-                char buffer[4096];
-                while(!feof(temp)){
-                    size_t bytes = fread(buffer, 1, sizeof(buffer), temp);
-                    if(bytes > 0) fwrite(buffer, 1, bytes, nb);
-                }
-                fclose(nb);
-                fclose(temp);
-                remove(tempPath);
-
-                doc->notebookIndex = idx.count;
+        doc->notebookIndex = idx.count;
     }
 }
 

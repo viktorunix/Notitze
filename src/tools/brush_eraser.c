@@ -28,15 +28,12 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
     bool *dirtyTiles = (bool*)calloc(totalTiles, sizeof(bool));
     bool needsRebake = false;
 
-
     float eMinX = pos.x - eraserRadius;
     float eMaxX = pos.x + eraserRadius;
     float eMinY = pos.y - eraserRadius;
     float eMaxY = pos.y + eraserRadius;
 
-
     if (doc->useBakedRendering && activeLayer->tiles != NULL) {
-
 
         int startCol = (int)floor((eMinX * doc->renderScale) / TILE_SIZE);
         int endCol   = (int)floor((eMaxX * doc->renderScale) / TILE_SIZE);
@@ -47,12 +44,10 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
         if (endCol >= activeLayer->gridCols) endCol = activeLayer->gridCols - 1;
         if (endRow >= activeLayer->gridRows) endRow = activeLayer->gridRows - 1;
 
-
         for (int r = startRow; r <= endRow; r++) {
             for (int c = startCol; c <= endCol; c++) {
                 int tileIndex = (r * activeLayer->gridCols) + c;
                 Tile *tile = &activeLayer->tiles[tileIndex];
-
 
                 for (int idx = tile->strokeCount - 1; idx >= 0; idx--) {
                     int i = tile->strokeIndices[idx];
@@ -94,7 +89,6 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                     if (hit) {
                         StrokeAABB bounds = CalculateStrokeAABB(s);
 
-                        // Flag all tiles touched by the erased stroke so they redraw cleanly
                         int rStartCol = (int)floor((bounds.minX * doc->renderScale) / TILE_SIZE);
                         int rEndCol   = (int)floor((bounds.maxX * doc->renderScale) / TILE_SIZE);
                         int rStartRow = (int)floor((bounds.minY * doc->renderScale) / TILE_SIZE);
@@ -175,12 +169,11 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                         ClearBackground(BLANK);
 
                         Camera2D tileCam = {0};
-                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE), -(float)(row * TILE_SIZE) };
-                        tileCam.zoom = doc->renderScale;
+                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f) };
+                        tileCam.zoom = doc->renderScale *2.0f;
 
                         BeginMode2D(tileCam);
                         BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-
 
                         for (int idx = 0; idx < tile->strokeCount; idx++) {
                             int sIdx = tile->strokeIndices[idx];
@@ -190,7 +183,6 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                         EndBlendMode();
                         EndMode2D();
                         EndTextureMode();
-                        
                     }
                 }
             }
@@ -199,18 +191,20 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
 
     free(dirtyTiles);
 }
+
 static void Eraser_RenderPreview(Document *doc, Vector2 pos, float thickness){
     float eraserRadius = thickness *2.0f;
     DrawCircleLines(pos.x, pos.y, eraserRadius, RED);
 }
-static void Eraser_OnPress(Document *doc, Vector2 pos, float pressure) {
 
+static void Eraser_OnPress(Document *doc, Vector2 pos, float pressure) {
     doc->isDrawing = true;
 }
 
 static void Eraser_OnRelease(Document *doc, Vector2 pos) {
     doc->isDrawing = false;
 }
+
 Brush CreateEraserBrush(void){
     Brush eraser = {0};
     eraser.id = BRUSH_ERASER;

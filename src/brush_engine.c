@@ -4,29 +4,24 @@
 StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
     if(stroke->hasBounds)
         return stroke->bounds;
+        
     StrokeAABB box = {999999.0f, 999999.0f, -999999.0f, -999999.0f};
 
     if(stroke->type == BRUSH_TEXT && stroke->pointCount > 0){
         int fontSize = (int)(stroke->thickness * 8.0f);
         if (fontSize < 10) fontSize = 10;
-
-
         int textWidth = MeasureText(stroke->text, fontSize);
-
         box.minX = stroke->points[0].pos.x;
         box.minY = stroke->points[0].pos.y;
         box.maxX = stroke->points[0].pos.x + textWidth;
         box.maxY = stroke->points[0].pos.y + fontSize;
-    }else if (stroke->type == BRUSH_CIRCLE && stroke->pointCount >= 2) {
+    } else if (stroke->type == BRUSH_CIRCLE && stroke->pointCount >= 2) {
         float radius = Vector2Distance(stroke->points[0].pos, stroke->points[1].pos);
         box.minX = stroke->points[0].pos.x - radius;
         box.minY = stroke->points[0].pos.y - radius;
         box.maxX = stroke->points[0].pos.x + radius;
         box.maxY = stroke->points[0].pos.y + radius;
-    }
-     else{
-
-
+    } else {
         for (int i = 0; i < stroke->pointCount; i++) {
             if (stroke->points[i].pos.x < box.minX) box.minX = stroke->points[i].pos.x;
             if (stroke->points[i].pos.y < box.minY) box.minY = stroke->points[i].pos.y;
@@ -34,7 +29,9 @@ StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
             if (stroke->points[i].pos.y > box.maxY) box.maxY = stroke->points[i].pos.y;
         }
     }
-    float padding = (stroke->thickness * 2.0f) + 150.0f;
+    
+    // Padding generos pentru a acoperi curbele Catmull-Rom care ies mult în afară
+    float padding = (stroke->thickness * 2.0f) + 800.0f;
     box.minX -= padding;
     box.minY -= padding;
     box.maxX += padding;
@@ -44,6 +41,7 @@ StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
     stroke->hasBounds = true;
     return box;
 }
+
 Vector2 CalculateSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
     float t2 = t * t;
     float t3 = t2 * t;
@@ -62,6 +60,7 @@ Color Premultiply(Color c){
     };
     return result;
 }
+
 void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pColor){
     if(stroke->pointCount < 3){
         for(int j = 0; j < stroke->pointCount - 1; j++){
@@ -123,7 +122,6 @@ void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pC
         float endPressure = doc.pressureEnabled ? stroke->points[stroke->pointCount - 1].pressure : 1.0f;
         float endThick = stroke->thickness * endPressure;
         endThick = fmaxf(endThick, 0.5f);
-        //DrawCircleV(last, endThick/ 2.0f, pColor);
 
         Rectangle source = {0,0, (float)doc.brushTex.width, (float)doc.brushTex.height};
         Rectangle destination = {last.x, last.y, endThick, endThick};
@@ -131,6 +129,7 @@ void RenderBrushStroke(Document doc, Stroke *stroke, float pageYOffset, Color pC
         DrawTexturePro(doc.brushTex, source, destination, origin, 0.0f, pColor);
     }
 }
+
 void RenderHighlighterStroke(Document doc, Stroke *stroke, float pageYOffset){
     Color hColor = stroke->color;
     hColor.a = 100;
@@ -188,11 +187,11 @@ void RenderHighlighterStroke(Document doc, Stroke *stroke, float pageYOffset){
                 DrawTriangle(o2, n1, n2, mColor);
 
                 lastP = nextP;
-
             }
         }
     }
 }
+
 void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
     Color graphite = stroke->color;
     graphite.a = 30;
@@ -219,8 +218,7 @@ void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
                 DrawTexturePro(doc.pencilTex, source, dest, origin, 0.0f, graphite);
             }
         }
-    }
-    else{
+    } else {
         for(int j = 0; j< stroke->pointCount - 1; j++){
             StrokePoint p0 = (j == 0) ? stroke->points[0] : stroke->points[j-1];
             StrokePoint p1 = stroke->points[j];
@@ -257,24 +255,26 @@ void RenderPencilStroke(Document doc, Stroke *stroke, float pageYOffset){
         }
     }
 }
+
 void RenderLineShape(Stroke *stroke, Vector2 p1, Vector2 p2){
     DrawLineEx(p1, p2, stroke->thickness, stroke->color);
     DrawCircleV(p1, stroke->thickness / 2.0f, stroke->color);
     DrawCircleV(p2, stroke->thickness / 2.0f, stroke->color);
 }
+
 void RenderRectangleShape(Stroke *stroke, Vector2 p1, Vector2 p2){
     float rx = fminf(p1.x, p2.x);
     float ry = fminf(p1.y, p2.y);
     float rw = fabsf(p1.x - p2.x);
     float rh = fabsf(p1.y - p2.y);
     DrawRectangleLinesEx((Rectangle){rx, ry, rw, rh}, stroke->thickness, stroke->color);
-
 }
+
 void RenderCircleShape(Stroke *stroke, Vector2 p1, Vector2 p2){
     float radius = Vector2Distance(p1, p2);
     DrawRing(p1, radius - (stroke->thickness / 2.0f),radius + (stroke->thickness / 2.0f), 0,360, 64,stroke->color);
-
 }
+
 void RenderShape(Stroke *stroke, float pageYOffset){
     Vector2 p1 = {stroke->points[0].pos.x, stroke->points[0].pos.y + pageYOffset};
     Vector2 p2 = {stroke->points[1].pos.x, stroke->points[1].pos.y + pageYOffset};
@@ -285,6 +285,7 @@ void RenderShape(Stroke *stroke, float pageYOffset){
     else if (stroke->type == BRUSH_CIRCLE)
         RenderCircleShape(stroke, p1, p2);
 }
+
 void RenderStroke(Document doc, Stroke *stroke, float pageYOffset){
     if(stroke->pointCount == 0) return;
     if(stroke->type == BRUSH_TEXT){

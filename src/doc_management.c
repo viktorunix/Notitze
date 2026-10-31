@@ -2,6 +2,7 @@
 #include "include/command_system.h"
 #include "include/paper.h"
 #include <string.h>
+
 void MoveActivePageUp(Document *doc){
     if(doc->activePage > 0){
         Page temp = doc->pages[doc->activePage];
@@ -20,7 +21,6 @@ void MoveActivePageDown(Document *doc){
     }
 }
 
-
 void FinishStroke(Stroke *currentStroke, Document *doc){
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2) ||
@@ -33,19 +33,17 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
            StrokeAABB bounds = CalculateStrokeAABB(currentStroke);
 
-            //map world coordinates to tile grid indices (factoring in renderScale)
+            // Calculam indicii tile-urilor la scara logica (TILE_SIZE normal)
             int startCol = (int)floor((bounds.minX * doc->renderScale) / TILE_SIZE);
             int endCol   = (int)floor((bounds.maxX * doc->renderScale) / TILE_SIZE);
             int startRow = (int)floor((bounds.minY * doc->renderScale) / TILE_SIZE);
             int endRow   = (int)floor((bounds.maxY * doc->renderScale) / TILE_SIZE);
 
-            //clamp to grid boundaries to prevent segfaults
             if (startCol < 0) startCol = 0;
             if (startRow < 0) startRow = 0;
             if (endCol >= activeLayer->gridCols) endCol = activeLayer->gridCols - 1;
             if (endRow >= activeLayer->gridRows) endRow = activeLayer->gridRows - 1;
 
-            //the Targeted Bake Loop
             for (int row = startRow; row <= endRow; row++) {
                 for (int col = startCol; col <= endCol; col++) {
                     int tileIndex = (row * activeLayer->gridCols) + col;
@@ -53,8 +51,9 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
                     int newStrokeIndex = activeLayer->strokeCount - 1;
                     AddStrokeToTile(tile, newStrokeIndex);
+                    
                     if (!tile->isAllocated) {
-                        tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
+                        tile->texture = LoadRenderTexture2DOnly(TILE_SIZE * 2, TILE_SIZE * 2);
                         SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_BILINEAR);
                         tile->isAllocated = true;
 
@@ -62,32 +61,27 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
                         ClearBackground(BLANK);
                         EndTextureMode();
                     }
+                    
                     BeginTextureMode(tile->texture);
 
                     Camera2D tileCam = {0};
-                    //shift the camera so the tile's world-space coordinates map to (0,0) of the FBO
-                    tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE), -(float)(row * TILE_SIZE) };
-                    tileCam.zoom = doc->renderScale;
+                    // Offset dublu pt spatiul 1024
+                    tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f) };
+                    tileCam.zoom = doc->renderScale * 2.0f; // Fara *2.0f aici
 
                     BeginMode2D(tileCam);
                     BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
 
-
-                    //TODO: only draw strokes that intersect this tile's AABB)
-                    //for(int i = 0; i < activeLayer->strokeCount; i++){
-                    //    RenderStroke(*doc, &activeLayer->strokes[i], 0);
-                    //}
+                    // Randam incremental doar linia curenta pe tile-ul corespunzator
                     RenderStroke(*doc, currentStroke, 0);
+                    
                     EndBlendMode();
                     EndMode2D();
                     EndTextureMode();
-                    
-                    //GenTextureMipmaps(&tile->texture.texture);
                 }
             }
         }
-    } else{
-
+    } else {
         free(currentStroke->points);
     }
     *currentStroke = (Stroke){0};

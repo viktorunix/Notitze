@@ -42,24 +42,6 @@ Texture2D GenerateSmoothBrush(void){
 }
 void InitRenderer(Document* doc) {
     Texture2D softBrushTex = GenerateSmoothBrush();
-    /*Image brushImage = GenImageColor(256, 256, BLANK);
-    for(int y = 0; y < 256; y++){
-        for(int x = 0; x < 256; x++){
-            float dist = Vector2Distance((Vector2){x + 0.5f, y + 0.5f}, (Vector2){128.0f, 128.0f});
-            if(dist <= 126.0f){
-                ImageDrawPixel(&brushImage, x, y, WHITE);
-            } else if(dist <= 128.0f){
-                float alpha = (128.0f - dist) / 2.0f;
-                unsigned char aVal = (unsigned char)(alpha * 255.0f);
-                Color c = {aVal, aVal, aVal, aVal};
-                ImageDrawPixel(&brushImage, x, y, c);
-            }
-        }
-    }
-    Texture2D softBrushTex = LoadTextureFromImage(brushImage);
-    UnloadImage(brushImage);
-    SetTextureFilter(softBrushTex, TEXTURE_FILTER_BILINEAR);
-    */
     doc->brushTex = softBrushTex;
     CacheTexture("penBrush", softBrushTex);
     Image pencilImage = GenImageColor(256, 256, BLANK);
@@ -86,7 +68,6 @@ void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     Color marginColor = (Color){255, 150, 150, 180};
     float spacing = doc->patternSpacing <= 5.0f ? 30.0f : doc->patternSpacing;
 
-
     if (pattern == BG_LINED){
         DrawLine(80, pageYOffset, 80, pageYOffset + doc->pageHeight, marginColor);
         for(int y = 80; y < doc->pageHeight; y+=spacing){
@@ -98,8 +79,6 @@ void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
             DrawLine(x, pageYOffset, x, pageYOffset + doc->pageHeight, lineColor);
         for(int y = 30; y < doc->pageHeight; y+=spacing)
             DrawLine(0, pageYOffset + y, doc->pageWidth, pageYOffset + y, lineColor);
-
-
     }
     else if (pattern == BG_DOTS){
         for(int x = 30; x < doc->pageWidth; x+=spacing){
@@ -133,7 +112,6 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
         Rectangle thumbRec = {pX + 60, lY + 6, 80, 113};
         DrawRectangleRec(thumbRec, RAYWHITE);
 
-        // --- REPLACE THIS BLOCK ---
         if(doc->useBakedRendering && layer->tiles != NULL) {
             BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
@@ -154,7 +132,6 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
                         float destH = logicalTileSize * scaleY;
 
                         Rectangle dest = {destX, destY, destW, destH};
-                        // Use the raw FBO size for the source rectangle
                         Rectangle src = {0, 0, (float)tile->texture.texture.width, -(float)tile->texture.texture.height};
 
                         DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
@@ -164,8 +141,6 @@ void GUILayerPanel(Document *doc, Stroke currentStroke){
             EndBlendMode();
             EndScissorMode();
         }
-
-        // Leave the live-rendering fallback right below it untouched:
 
         if(!doc->useBakedRendering || (doc->isDrawing && doc->activePage >= 0 && l == aPage->activeLayer)){
             BeginScissorMode(thumbRec.x, thumbRec.y, thumbRec.width, thumbRec.height);
@@ -201,7 +176,6 @@ void RebakeAllLayers(Document *doc) {
         for(int l = 0; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
 
-            // 1. Destroy old grid
             if(layer->tiles){
                 int oldTotal = layer->gridCols * layer->gridRows;
                 for(int i = 0; i < oldTotal; i++){
@@ -210,13 +184,11 @@ void RebakeAllLayers(Document *doc) {
                 free(layer->tiles);
             }
 
-            // 2. Calculate new grid based on updated doc->renderScale
             layer->gridCols = (int)ceil((doc->pageWidth * doc->renderScale) / TILE_SIZE);
             layer->gridRows = (int)ceil((doc->pageHeight * doc->renderScale) / TILE_SIZE);
             int totalTiles = layer->gridCols * layer->gridRows;
             layer->tiles = (Tile *)calloc(totalTiles, sizeof(Tile));
 
-            // 3. Re-bake all strokes into the new chunk system
             for(int s = 0; s < layer->strokeCount; s++){
                 Stroke *currentStroke = &layer->strokes[s];
                 StrokeAABB bounds = CalculateStrokeAABB(currentStroke);
@@ -238,66 +210,65 @@ void RebakeAllLayers(Document *doc) {
 
                         AddStrokeToTile(tile, s);
                         if (!tile->isAllocated) {
-                            tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
+                            tile->texture = LoadRenderTexture2DOnly(TILE_SIZE * 2, TILE_SIZE * 2);
                             SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_BILINEAR);
                             tile->isAllocated = true;
 
-                            // Initialize with blank background
                             BeginTextureMode(tile->texture);
                             ClearBackground(BLANK);
                             EndTextureMode();
                         }
 
-                        // Add stroke to tile
                         BeginTextureMode(tile->texture);
                         Camera2D tileCam = {0};
-                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE), -(float)(row * TILE_SIZE) };
-                        tileCam.zoom = doc->renderScale;
+                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f) };
+                        tileCam.zoom = doc->renderScale * 2.0f;
 
                         BeginMode2D(tileCam);
                         BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+                        
                         RenderStroke(*doc, currentStroke, 0);
+                        
                         EndBlendMode();
                         EndMode2D();
                         EndTextureMode();
-                        
                     }
                 }
             }
         }
     }
 }
-void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera){    // 1. Draw Paper and Background
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera){
     DrawRectangle(8, pageYOffset + 8, doc->pageWidth, doc->pageHeight, BLACK);
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
 
-   Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, (float)pageYOffset}, camera);
-Vector2 br = GetWorldToScreen2D((Vector2){doc->pageWidth, (float)(pageYOffset + doc->pageHeight)}, camera);
+    Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, (float)pageYOffset}, camera);
+    Vector2 br = GetWorldToScreen2D((Vector2){doc->pageWidth, (float)(pageYOffset + doc->pageHeight)}, camera);
 
-// Limităm Scissor-ul la dimensiunile ecranului pentru a preveni crash-ul GPU-ului
-int scrW = GetScreenWidth();
-int scrH = GetScreenHeight();
+    int scrW = GetScreenWidth();
+    int scrH = GetScreenHeight();
 
-int sX = (int)tl.x < 0 ? 0 : (int)tl.x;
-int sY = (int)tl.y < 0 ? 0 : (int)tl.y;
-int eX = (int)br.x > scrW ? scrW : (int)br.x;
-int eY = (int)br.y > scrH ? scrH : (int)br.y;
+    int sX = (int)tl.x < 0 ? 0 : (int)tl.x;
+    int sY = (int)tl.y < 0 ? 0 : (int)tl.y;
+    int eX = (int)br.x > scrW ? scrW : (int)br.x;
+    int eY = (int)br.y > scrH ? scrH : (int)br.y;
 
-int finalW = eX - sX;
-int finalH = eY - sY;
+    int finalW = eX - sX;
+    int finalH = eY - sY;
 
-if (finalW > 0 && finalH > 0) {
-    BeginScissorMode(sX, sY, finalW, finalH);
-} else {
-    BeginScissorMode(0, 0, 0, 0); // Pagina este complet în afara ecranului
-}
+    if (finalW > 0 && finalH > 0) {
+        BeginScissorMode(sX, sY, finalW, finalH);
+    } else {
+        BeginScissorMode(0, 0, 0, 0); 
+    }
+    
     Page *page = &doc->pages[p];
 
-    // 2. Render Layers
     for(int l = 0; l < page->layerCount; l++) {
         Layer *layer = &page->layers[l];
         if(!layer->isVisible) continue;
+        
         if(doc->useBakedRendering && layer->tiles != NULL && camera.zoom >=0.6f) {
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
 
@@ -313,27 +284,22 @@ if (finalW > 0 && finalH > 0) {
                         float exactY = pageYOffset + (row * logicalTileSize);
                         float exactW = logicalTileSize;
                         float exactH = logicalTileSize;
-                        
+
                         Vector2 tileScreenPos = GetWorldToScreen2D((Vector2){exactX, exactY}, camera);
                         float tileScreenScaledSize = exactW * camera.zoom;
                         if (tileScreenPos.y > GetScreenHeight() || 
                             tileScreenPos.y + tileScreenScaledSize < 0 ||
                             tileScreenPos.x > GetScreenWidth() ||
                             tileScreenPos.x + tileScreenScaledSize < 0) {
-                            continue; // Ignorăm complet acest tile
+                            continue;
                         }
-                        // edge clipping
-                        if (exactX + exactW > doc->pageWidth)
-                            exactW = doc->pageWidth - exactX;
-                        if ((exactY - pageYOffset) + exactH > doc->pageHeight)
-                            exactH = doc->pageHeight - (exactY - pageYOffset);
+                        
+                        if (exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
+                        if ((exactY - pageYOffset) + exactH > doc->pageHeight) exactH = doc->pageHeight - (exactY - pageYOffset);
 
-
-                        //get exact world coordinates
                         Vector2 tlWorld = { exactX, exactY };
                         Vector2 brWorld = { exactX + exactW, exactY + exactH };
 
-                        //project to screen space and lock to physical monitor pixels
                         Vector2 tlScreen = GetWorldToScreen2D(tlWorld, camera);
                         Vector2 brScreen = GetWorldToScreen2D(brWorld, camera);
 
@@ -342,7 +308,6 @@ if (finalW > 0 && finalH > 0) {
                         brScreen.x = roundf(brScreen.x);
                         brScreen.y = roundf(brScreen.y);
 
-                        //project back to world space.
                         Vector2 snappedTl = GetScreenToWorld2D(tlScreen, camera);
                         Vector2 snappedBr = GetScreenToWorld2D(brScreen, camera);
 
@@ -353,9 +318,8 @@ if (finalW > 0 && finalH > 0) {
                             snappedBr.y - snappedTl.y
                         };
 
-                        //source mapping remains exactly the same
-                        float srcW = exactW * doc->renderScale;
-                        float srcH = exactH * doc->renderScale;
+                        float srcW = exactW * doc->renderScale * 2.0f;
+                        float srcH = exactH * doc->renderScale * 2.0f;
                         float srcY = (float)tile->texture.texture.height - srcH;
 
                         Rectangle source = { 0, srcY, srcW, -srcH };
@@ -366,7 +330,6 @@ if (finalW > 0 && finalH > 0) {
             }
             EndBlendMode();
         } else {
-            //live rendering fallback
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             for(int i = 0; i < layer->strokeCount; i++){
                 RenderStroke(*doc, &layer->strokes[i], pageYOffset);
@@ -374,7 +337,6 @@ if (finalW > 0 && finalH > 0) {
             EndBlendMode();
         }
 
-        //render the active stroke
         if(doc->isDrawing && p == doc->activePage && l == page->activeLayer){
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             RenderStroke(*doc, currentStroke, pageYOffset);
@@ -391,6 +353,7 @@ if (finalW > 0 && finalH > 0) {
     int borderThickness = (p == doc->activePage) ? 4 : 1;
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
 }
+
 void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                        int draggedPage, float dragOffsetY,
                        Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos,
@@ -400,27 +363,21 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
     BeginDrawing();
     ClearBackground(DARKGRAY);
 
-
     BeginMode2D(camera);
 
-    //valculate the visible world-space Y boundaries
     float screenTopWorldY = GetScreenToWorld2D((Vector2){0, 0}, camera).y;
     float screenBottomWorldY = GetScreenToWorld2D((Vector2){0, GetScreenHeight()}, camera).y;
 
-    //map those Y coordinates to page indices
     float pageStride = doc->pageHeight + PAGE_GAP;
     int startPage = (int)floor(screenTopWorldY / pageStride);
     int endPage   = (int)floor(screenBottomWorldY / pageStride);
 
-    //add a 2-page buffer to prevent popping/lag during fast scrolling
     startPage -= 2;
     endPage += 2;
 
-    //clamp indices to ensure we don't read out of bounds
     if (startPage < 0) startPage = 0;
     if (endPage >= doc->pageCount) endPage = doc->pageCount - 1;
 
-    //render only the visible and buffered pages
     for (int p = startPage; p <= endPage; p++) {
         if (p == draggedPage) continue;
         float pageYOffset = p * pageStride;
@@ -436,25 +393,26 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
         DrawRectangle(0, floatY, doc->pageWidth, 40, SKYBLUE);
 
         Vector2 tlDrag = GetWorldToScreen2D((Vector2){0.0f, floatY}, camera);
-Vector2 brDrag = GetWorldToScreen2D((Vector2){doc->pageWidth, floatY + doc->pageHeight}, camera);
+        Vector2 brDrag = GetWorldToScreen2D((Vector2){doc->pageWidth, floatY + doc->pageHeight}, camera);
 
-int scrW = GetScreenWidth();
-int scrH = GetScreenHeight();
+        int scrW = GetScreenWidth();
+        int scrH = GetScreenHeight();
 
-int sX = (int)tlDrag.x < 0 ? 0 : (int)tlDrag.x;
-int sY = (int)tlDrag.y < 0 ? 0 : (int)tlDrag.y;
-int eX = (int)brDrag.x > scrW ? scrW : (int)brDrag.x;
-int eY = (int)brDrag.y > scrH ? scrH : (int)brDrag.y;
+        int sX = (int)tlDrag.x < 0 ? 0 : (int)tlDrag.x;
+        int sY = (int)tlDrag.y < 0 ? 0 : (int)tlDrag.y;
+        int eX = (int)brDrag.x > scrW ? scrW : (int)brDrag.x;
+        int eY = (int)brDrag.y > scrH ? scrH : (int)brDrag.y;
 
-int finalW = eX - sX;
-int finalH = eY - sY;
+        int finalW = eX - sX;
+        int finalH = eY - sY;
 
-if (finalW > 0 && finalH > 0) {
-    BeginScissorMode(sX, sY, finalW, finalH);
-} else {
-    BeginScissorMode(0, 0, 0, 0);
-}
-       Page *page = &doc->pages[draggedPage];
+        if (finalW > 0 && finalH > 0) {
+            BeginScissorMode(sX, sY, finalW, finalH);
+        } else {
+            BeginScissorMode(0, 0, 0, 0);
+        }
+        
+        Page *page = &doc->pages[draggedPage];
         for(int l = 0; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
 
@@ -479,9 +437,9 @@ if (finalW > 0 && finalH > 0) {
 
                         Rectangle dest = { exactX, exactY, exactW + 0.5f, exactH + 0.5f };
 
-                        float srcW = exactW * doc->renderScale;
-                        float srcH = exactH * doc->renderScale;
-                        float srcY = tile->texture.texture.height - srcH;
+                        float srcW = exactW * doc->renderScale * 2.0f;
+                        float srcH = exactH * doc->renderScale * 2.0f;
+                        float srcY = (float)tile->texture.texture.height - srcH;
 
                         Rectangle src = { 0, srcY, srcW, -srcH };
 
@@ -490,7 +448,6 @@ if (finalW > 0 && finalH > 0) {
                 }
             }
             EndBlendMode();
-
         }
         EndScissorMode();
     }
@@ -516,6 +473,7 @@ if (finalW > 0 && finalH > 0) {
 
     EndDrawing();
 }
+
 void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
     if(pageIndex < 0 || pageIndex >= doc->pageCount) return;
 
@@ -557,9 +515,9 @@ void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
 
                         Rectangle dest = { (float)snapX, (float)snapY, (float)snapW, (float)snapH };
 
-                        float srcW = exactW * doc->renderScale;
-                        float srcH = exactH * doc->renderScale;
-                        float srcY = tile->texture.texture.height - srcH;
+                        float srcW = exactW * doc->renderScale * 2.0f;
+                        float srcH = exactH * doc->renderScale * 2.0f;
+                        float srcY = (float)tile->texture.texture.height - srcH;
 
                         Rectangle src = { 0, srcY, srcW, -srcH };
 
@@ -568,7 +526,7 @@ void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
                 }
             }
             EndBlendMode();
-        } else{
+        } else {
             for(int i = 0; i < layer->strokeCount; i++){
                 RenderStroke(*doc, &layer->strokes[i], 0);
             }
