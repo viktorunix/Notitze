@@ -96,6 +96,7 @@ int main(void){
 
     AppState appState = STATE_MENU;
     InitMainMenu();
+
     while(!WindowShouldClose()){
         bool hardwareActivity = (
             GetMouseDelta().x != 0.0f || GetMouseDelta().y !=0.0f ||
@@ -105,7 +106,11 @@ int main(void){
             IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) ||
             doc->isDrawing || draggedPage != -1 || settings.showSettings
         );
-        if(hardwareActivity){
+
+        bool cursorBlinking = (doc->activeBrush == BRUSH_TEXT && doc->isDrawing);
+
+        if(hardwareActivity || cursorBlinking || isStartup){
+            isStartup = false;
             frameSinceLastActivity = 0;
             SetTargetFPS(activeFPS);
         } else{

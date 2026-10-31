@@ -313,7 +313,15 @@ if (finalW > 0 && finalH > 0) {
                         float exactY = pageYOffset + (row * logicalTileSize);
                         float exactW = logicalTileSize;
                         float exactH = logicalTileSize;
-
+                        
+                        Vector2 tileScreenPos = GetWorldToScreen2D((Vector2){exactX, exactY}, camera);
+                        float tileScreenScaledSize = exactW * camera.zoom;
+                        if (tileScreenPos.y > GetScreenHeight() || 
+                            tileScreenPos.y + tileScreenScaledSize < 0 ||
+                            tileScreenPos.x > GetScreenWidth() ||
+                            tileScreenPos.x + tileScreenScaledSize < 0) {
+                            continue; // Ignorăm complet acest tile
+                        }
                         // edge clipping
                         if (exactX + exactW > doc->pageWidth)
                             exactW = doc->pageWidth - exactX;
@@ -348,9 +356,9 @@ if (finalW > 0 && finalH > 0) {
                         //source mapping remains exactly the same
                         float srcW = exactW * doc->renderScale;
                         float srcH = exactH * doc->renderScale;
-                        float srcY = (float)tile->texture.texture.height;
+                        float srcY = (float)tile->texture.texture.height - srcH;
 
-                        Rectangle source = { 0, 0, srcW, -srcH };
+                        Rectangle source = { 0, srcY, srcW, -srcH };
 
                         DrawTexturePro(tile->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
                     }
@@ -475,7 +483,7 @@ if (finalW > 0 && finalH > 0) {
                         float srcH = exactH * doc->renderScale;
                         float srcY = tile->texture.texture.height - srcH;
 
-                        Rectangle src = { 0, 0, srcW, -srcH };
+                        Rectangle src = { 0, srcY, srcW, -srcH };
 
                         DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
                     }
