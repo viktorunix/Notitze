@@ -159,12 +159,15 @@ void UndoCommand(Document *doc){
                     BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
 
                     for(int s = 0; s < layer->strokeCount; s++) {
-                        RenderStroke(*doc, &layer->strokes[s], 0);
+                        int sIdx = tile->strokeIndices[s];
+                        RenderStroke(*doc, &layer->strokes[sIdx], 0);
                     }
 
                     EndBlendMode();
                     EndMode2D();
                     EndTextureMode();
+
+                    
                 }
             }
         }

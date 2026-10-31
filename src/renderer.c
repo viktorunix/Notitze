@@ -36,7 +36,7 @@ Texture2D GenerateSmoothBrush(void){
     }
     Texture2D tex = LoadTextureFromImage(img);
     GenTextureMipmaps(&tex);
-    SetTextureFilter(tex, TEXTURE_FILTER_TRILINEAR);
+    SetTextureFilter(tex, TEXTURE_FILTER_BILINEAR);
     UnloadImage(img);
     return tex;
 }
@@ -239,7 +239,7 @@ void RebakeAllLayers(Document *doc) {
                         AddStrokeToTile(tile, s);
                         if (!tile->isAllocated) {
                             tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
-                            SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_TRILINEAR);
+                            SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_BILINEAR);
                             tile->isAllocated = true;
 
                             // Initialize with blank background
@@ -260,7 +260,7 @@ void RebakeAllLayers(Document *doc) {
                         EndBlendMode();
                         EndMode2D();
                         EndTextureMode();
-                        GenTextureMipmaps(&tile->texture.texture);
+                        
                     }
                 }
             }
@@ -272,6 +272,26 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
 
+   Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, (float)pageYOffset}, camera);
+Vector2 br = GetWorldToScreen2D((Vector2){doc->pageWidth, (float)(pageYOffset + doc->pageHeight)}, camera);
+
+// Limităm Scissor-ul la dimensiunile ecranului pentru a preveni crash-ul GPU-ului
+int scrW = GetScreenWidth();
+int scrH = GetScreenHeight();
+
+int sX = (int)tl.x < 0 ? 0 : (int)tl.x;
+int sY = (int)tl.y < 0 ? 0 : (int)tl.y;
+int eX = (int)br.x > scrW ? scrW : (int)br.x;
+int eY = (int)br.y > scrH ? scrH : (int)br.y;
+
+int finalW = eX - sX;
+int finalH = eY - sY;
+
+if (finalW > 0 && finalH > 0) {
+    BeginScissorMode(sX, sY, finalW, finalH);
+} else {
+    BeginScissorMode(0, 0, 0, 0); // Pagina este complet în afara ecranului
+}
     Page *page = &doc->pages[p];
 
     // 2. Render Layers
@@ -328,9 +348,9 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
                         //source mapping remains exactly the same
                         float srcW = exactW * doc->renderScale;
                         float srcH = exactH * doc->renderScale;
-                        float srcY = tile->texture.texture.height - srcH;
+                        float srcY = (float)tile->texture.texture.height;
 
-                        Rectangle source = { 0, srcY, srcW, -srcH };
+                        Rectangle source = { 0, 0, srcW, -srcH };
 
                         DrawTexturePro(tile->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
                     }
@@ -356,6 +376,8 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
 
     DrawRectangle(0, pageYOffset, doc->pageWidth, 40, (Color){200,200,200,255});
     DrawText("|||", doc->pageWidth/2 - MeasureText("|||", 20)/ 2, pageYOffset + 10, 20, DARKGRAY);
+
+    EndScissorMode();
 
     Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
     int borderThickness = (p == doc->activePage) ? 4 : 1;
@@ -405,6 +427,25 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
         DrawPageBackground(doc, doc->pattern, floatY);
         DrawRectangle(0, floatY, doc->pageWidth, 40, SKYBLUE);
 
+        Vector2 tlDrag = GetWorldToScreen2D((Vector2){0.0f, floatY}, camera);
+Vector2 brDrag = GetWorldToScreen2D((Vector2){doc->pageWidth, floatY + doc->pageHeight}, camera);
+
+int scrW = GetScreenWidth();
+int scrH = GetScreenHeight();
+
+int sX = (int)tlDrag.x < 0 ? 0 : (int)tlDrag.x;
+int sY = (int)tlDrag.y < 0 ? 0 : (int)tlDrag.y;
+int eX = (int)brDrag.x > scrW ? scrW : (int)brDrag.x;
+int eY = (int)brDrag.y > scrH ? scrH : (int)brDrag.y;
+
+int finalW = eX - sX;
+int finalH = eY - sY;
+
+if (finalW > 0 && finalH > 0) {
+    BeginScissorMode(sX, sY, finalW, finalH);
+} else {
+    BeginScissorMode(0, 0, 0, 0);
+}
        Page *page = &doc->pages[draggedPage];
         for(int l = 0; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
@@ -434,14 +475,16 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
                         float srcH = exactH * doc->renderScale;
                         float srcY = tile->texture.texture.height - srcH;
 
-                        Rectangle src = { 0, srcY, srcW, -srcH };
+                        Rectangle src = { 0, 0, srcW, -srcH };
 
                         DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
                     }
                 }
             }
             EndBlendMode();
+
         }
+        EndScissorMode();
     }
 
 

@@ -17,7 +17,14 @@ StrokeAABB CalculateStrokeAABB(Stroke *stroke) {
         box.minY = stroke->points[0].pos.y;
         box.maxX = stroke->points[0].pos.x + textWidth;
         box.maxY = stroke->points[0].pos.y + fontSize;
-    } else{
+    }else if (stroke->type == BRUSH_CIRCLE && stroke->pointCount >= 2) {
+        float radius = Vector2Distance(stroke->points[0].pos, stroke->points[1].pos);
+        box.minX = stroke->points[0].pos.x - radius;
+        box.minY = stroke->points[0].pos.y - radius;
+        box.maxX = stroke->points[0].pos.x + radius;
+        box.maxY = stroke->points[0].pos.y + radius;
+    }
+     else{
 
 
         for (int i = 0; i < stroke->pointCount; i++) {

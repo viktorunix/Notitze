@@ -55,11 +55,14 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
                     AddStrokeToTile(tile, newStrokeIndex);
                     if (!tile->isAllocated) {
                         tile->texture = LoadRenderTexture2DOnly(TILE_SIZE, TILE_SIZE);
-                        SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_POINT);
+                        SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_BILINEAR);
                         tile->isAllocated = true;
+
+                        BeginTextureMode(tile->texture);
+                        ClearBackground(BLANK);
+                        EndTextureMode();
                     }
                     BeginTextureMode(tile->texture);
-                    ClearBackground(BLANK);
 
                     Camera2D tileCam = {0};
                     //shift the camera so the tile's world-space coordinates map to (0,0) of the FBO
@@ -71,13 +74,15 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
 
 
                     //TODO: only draw strokes that intersect this tile's AABB)
-                    for(int i = 0; i < activeLayer->strokeCount; i++){
-                        RenderStroke(*doc, &activeLayer->strokes[i], 0);
-                    }
-
+                    //for(int i = 0; i < activeLayer->strokeCount; i++){
+                    //    RenderStroke(*doc, &activeLayer->strokes[i], 0);
+                    //}
+                    RenderStroke(*doc, currentStroke, 0);
                     EndBlendMode();
                     EndMode2D();
                     EndTextureMode();
+                    
+                    //GenTextureMipmaps(&tile->texture.texture);
                 }
             }
         }

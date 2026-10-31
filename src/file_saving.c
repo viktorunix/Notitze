@@ -187,6 +187,7 @@ bool LoadDocumentBinary(const char *filename, Document *doc){
             currentStroke->capacity = meta.pointCount;
             currentStroke->points = NULL;
 
+            currentStroke->hasBounds = false;
             currentLayer->strokeCount++;
         }
         else if(strcmp(tag, "STRP") == 0){

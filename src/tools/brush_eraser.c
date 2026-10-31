@@ -190,6 +190,7 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                         EndBlendMode();
                         EndMode2D();
                         EndTextureMode();
+                        
                     }
                 }
             }
