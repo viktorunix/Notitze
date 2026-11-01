@@ -68,7 +68,9 @@ int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeni
 
     //sending the state of viewport and the drawing process
     UpdateViewportMath(vp, doc, mousePos, guiClicked);
-    ProcessInputs(doc, vp, guiClicked, draggedPage, dragOffsetY, currentPressure);
+    InputState state = {0};
+    PollInputState(&state, settings, vp->camera, guiClicked);
+    ProcessInputs(doc, vp, &state, draggedPage, dragOffsetY);
     return guiClicked;
 }
 int main(void){

@@ -3,70 +3,108 @@
 #include "include/doc_management.h"
 #include "include/raymath.h"
 #include "include/tablet_support.h"
+#include "include/command_system.h"
 #define PAGE_GAP 60
 
 
 extern Stroke currentStroke;
+void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool guiHovered){
+    state->mouseScreenPos = GetMousePosition();
+    state->mouseWorldPos = GetScreenToWorld2D(state->mouseScreenPos, camera);
+    state->mouseDelta = GetMouseDelta();
+    state->scrollDelta = GetMouseWheelMove();
+    state->pressure = GetTabletPressure();
 
-void ProcessInputs(Document* doc, Viewport* vp, bool guiClicked, int* draggedPage, float* dragOffsetY, float* currentPressure) {
+    state->isHardwareActive = (
+        state->mouseDelta.x != 0.0f || state->mouseDelta.y != 0.0f ||
+        state->scrollDelta != 0.0f || 
+        GetKeyPressed() != 0 || GetCharPressed() != 0 ||
+        IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT) ||
+        IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)
+    );
 
+    //cleaning last frame action
+    for(int i = 0; i < ACTION_COUNT; i++){
+        state->active[i] = false;
+        state->pressed[i] = false;
+        state->released[i] = false;
+    }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !guiClicked) {
-        if (vp->isMouseInsideCanvas) {
+    if(!guiHovered){
+        if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) state->active[ACTION_DRAW] = true;
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) state->pressed[ACTION_DRAW] = true;
+        if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) state->released[ACTION_DRAW] = true;
+
+        if(IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) state->active[ACTION_PAN] = true;
+
+        if(state->scrollDelta > 0) state->pressed[ACTION_ZOOM_IN] = true;
+        if(state->scrollDelta < 0) state->pressed[ACTION_ZOOM_OUT] = true;
+    }
+    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Z)) {
+        state->pressed[ACTION_UNDO] = true;
+    }
+    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_Z)) {
+        state->pressed[ACTION_REDO] = true;
+    }
+
+}
+void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedPage, float* dragOffsetY){
+    if(state->pressed[ACTION_DRAW]){
+        if(vp->isMouseInsideCanvas){
             doc->activePage = vp->hoveredPage;
 
-            if (vp->localMousePos.y <= 40) {
+            if(vp->localMousePos.y <=40){
                 *draggedPage = vp->hoveredPage;
-                *dragOffsetY = vp->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
+                *dragOffsetY = state->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
+
             } else {
-                *currentPressure = GetTabletPressure();
-                GetActiveBrush()->OnPress(doc, vp->localMousePos, *currentPressure);
+                GetActiveBrush()->OnPress(doc, vp->localMousePos, state->pressure);
+
             }
         } else {
             vp->isPanning = true;
         }
     }
 
-
-    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+    if(state->pressed[ACTION_PAN]){
         vp->isPanning = true;
+
+    }
+    if(state->pressed[ACTION_UNDO]){
+        UndoCommand(doc);
     }
 
+    if(*draggedPage != -1){
 
-    if (*draggedPage != -1) {
-        // Dragging a page header... (Handled visually by the renderer)
     }
-    else if (doc->isDrawing && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        float clampedX = vp->mouseWorldPos.x;
+    else  if (doc->isDrawing && state->active[ACTION_DRAW]){
+        float clampedX = state->mouseWorldPos.x;
         if (clampedX < 0.0f) clampedX = 0.0f;
-        if (clampedX > doc->pageWidth) clampedX = doc->pageWidth;
+        if(clampedX > doc->pageWidth) clampedX = doc->pageWidth;
 
         float clampedY = vp->localMousePos.y;
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
-        Vector2 clampedPos = {clampedX, clampedY};
-        if(IsUsingTablet()){
-            *currentPressure = GetTabletPressure();
-        } else{
-            *currentPressure = 1;
-        }
-        GetActiveBrush()->OnDrag(doc, clampedPos, *currentPressure);
 
-        if (!vp->isMouseInsideCanvas) {
+        Vector2 clampedPos = {clampedX, clampedY};
+
+        GetActiveBrush()->OnDrag(doc, clampedPos, state->pressure);
+
+        if(!vp->isMouseInsideCanvas){
             GetActiveBrush()->OnRelease(doc, clampedPos);
         }
     }
-    else if (vp->isPanning) {
+    else if (vp->isPanning || state->active[ACTION_PAN]){
         ApplyPanning(vp);
     }
 
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
-        if (*draggedPage != -1) {
-            int dropIndex = (int)(vp->mouseWorldPos.y / (doc->pageHeight + PAGE_GAP));
+    if(state->released[ACTION_DRAW] || state->released[ACTION_PAN]){
+        if(*draggedPage != -1){
+            int dropIndex = (int)(state->mouseWorldPos.y / (doc->pageHeight + PAGE_GAP));
             MovePageToIndex(doc, *draggedPage, dropIndex);
             *draggedPage = -1;
         }
-        if (doc->isDrawing) {
+        if(doc->isDrawing){
             GetActiveBrush()->OnRelease(doc, vp->localMousePos);
         }
         vp->isPanning = false;
