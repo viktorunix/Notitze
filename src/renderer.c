@@ -63,6 +63,27 @@ void InitRenderer(Document* doc) {
     SetTextureFilter(pencilTexture, TEXTURE_FILTER_POINT);
     doc->pencilTex = pencilTexture;
 }
+void BeginPageClipping(float pageWidth, float pageHeight, float pageYOffset, Camera2D camera){
+    Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, pageYOffset}, camera);
+    Vector2 br = GetWorldToScreen2D((Vector2){pageWidth, pageYOffset + pageHeight}, camera);
+
+    int scrW = GetScreenWidth();
+    int scrH = GetScreenHeight();
+
+    int sX = (int)tl.x < 0 ? 0 : (int) tl.x;
+    int sY = (int)tl.y < 0 ? 0 : (int) tl.y;
+    int eX = (int)br.x > scrW ? scrW : (int)br.x;
+    int eY = (int)br.y > scrH ? scrH : (int)br.y;
+
+    int finalW = eX - sX;
+    int finalH = eY - sY;
+
+    if(finalW > 0 && finalH > 0){
+        BeginScissorMode(sX, sY, finalW, finalH);
+    } else {
+        BeginScissorMode(0,0,0,0);
+    }
+}
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset){
     Color lineColor = doc->patternColor.a == 0 ? (Color){200,215,230,255} : doc->patternColor;
     Color marginColor = (Color){255, 150, 150, 180};
@@ -243,25 +264,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
 
-    Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, (float)pageYOffset}, camera);
-    Vector2 br = GetWorldToScreen2D((Vector2){doc->pageWidth, (float)(pageYOffset + doc->pageHeight)}, camera);
-
-    int scrW = GetScreenWidth();
-    int scrH = GetScreenHeight();
-
-    int sX = (int)tl.x < 0 ? 0 : (int)tl.x;
-    int sY = (int)tl.y < 0 ? 0 : (int)tl.y;
-    int eX = (int)br.x > scrW ? scrW : (int)br.x;
-    int eY = (int)br.y > scrH ? scrH : (int)br.y;
-
-    int finalW = eX - sX;
-    int finalH = eY - sY;
-
-    if (finalW > 0 && finalH > 0) {
-        BeginScissorMode(sX, sY, finalW, finalH);
-    } else {
-        BeginScissorMode(0, 0, 0, 0); 
-    }
+    BeginPageClipping(doc->pageWidth, doc->pageHeight, pageYOffset, camera);
     
     Page *page = &doc->pages[p];
 
@@ -392,25 +395,7 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
         DrawPageBackground(doc, doc->pattern, floatY);
         DrawRectangle(0, floatY, doc->pageWidth, 40, SKYBLUE);
 
-        Vector2 tlDrag = GetWorldToScreen2D((Vector2){0.0f, floatY}, camera);
-        Vector2 brDrag = GetWorldToScreen2D((Vector2){doc->pageWidth, floatY + doc->pageHeight}, camera);
-
-        int scrW = GetScreenWidth();
-        int scrH = GetScreenHeight();
-
-        int sX = (int)tlDrag.x < 0 ? 0 : (int)tlDrag.x;
-        int sY = (int)tlDrag.y < 0 ? 0 : (int)tlDrag.y;
-        int eX = (int)brDrag.x > scrW ? scrW : (int)brDrag.x;
-        int eY = (int)brDrag.y > scrH ? scrH : (int)brDrag.y;
-
-        int finalW = eX - sX;
-        int finalH = eY - sY;
-
-        if (finalW > 0 && finalH > 0) {
-            BeginScissorMode(sX, sY, finalW, finalH);
-        } else {
-            BeginScissorMode(0, 0, 0, 0);
-        }
+       BeginPageClipping(doc->pageWidth, doc->pageHeight, floatY, camera);
         
         Page *page = &doc->pages[draggedPage];
         for(int l = 0; l < page->layerCount; l++){

@@ -9,6 +9,8 @@
 
 void InitRenderer(Document* doc);
 
+void BeginPageClipping(float pageWidth, float pageHeight, float pageYOffset, Camera2D camera);
+
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);
