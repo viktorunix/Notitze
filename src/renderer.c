@@ -63,6 +63,64 @@ void InitRenderer(Document* doc) {
     SetTextureFilter(pencilTexture, TEXTURE_FILTER_POINT);
     doc->pencilTex = pencilTexture;
 }
+
+static void DrawTile(Tile *tile, int col, int row, float logicalTileSize, float pageYOffset, float pageWidth, float pageHeight, float renderScale, Camera2D *camera){
+    float exactX = col * logicalTileSize;
+    float exactY = pageYOffset + (row * logicalTileSize);
+    float exactW = logicalTileSize;
+    float exactH = logicalTileSize;
+
+    //frustum culling
+    if(camera){
+        Vector2 tileScreenPos = GetWorldToScreen2D((Vector2){exactX, exactY}, *camera);
+        float tileScreenScaledSize = exactW * camera->zoom;
+        if (tileScreenPos.y > GetScreenHeight() ||
+            tileScreenPos.y + tileScreenScaledSize < 0 ||
+            tileScreenPos.x > GetScreenWidth() ||
+            tileScreenPos.x  + tileScreenScaledSize < 0){
+                return;
+        }
+    }
+    //edge clipping
+    if (exactX + exactW > pageWidth) exactW = pageWidth - exactX;
+    if ((exactY - pageYOffset) + exactH > pageHeight) exactH = pageHeight - (exactY - pageYOffset);
+
+    //calculating destination rectangle
+
+    Rectangle destination;
+    if (camera){
+        Vector2 tlWorld = {exactX, exactY};
+        Vector2 brWorld = {exactX + exactW, exactY + exactH};
+
+        Vector2 tlScreen = GetWorldToScreen2D(tlWorld, *camera);
+        Vector2 brScreen = GetWorldToScreen2D(brWorld, *camera);
+
+        tlScreen.x = roundf(tlScreen.x);
+        tlScreen.y = roundf(tlScreen.y);
+        brScreen.x = roundf(brScreen.x);
+        brScreen.y = roundf(brScreen.y);
+
+        Vector2 snappedTl = GetScreenToWorld2D(tlScreen, *camera);
+        Vector2 snappedBr = GetScreenToWorld2D(brScreen, *camera);
+
+        destination = (Rectangle) {snappedTl.x, snappedTl.y, snappedBr.x - snappedTl.x, snappedBr.y - snappedTl.y};
+    } else {
+        int snapX = (int)roundf(exactX);
+        int snapY = (int)roundf(exactY);
+        int snapW = (int)roundf(exactX + exactW) - snapX;
+        int snapH = (int)roundf(exactY + exactH) - snapY;
+
+        destination = (Rectangle){ (float)snapX, (float)snapY, (float)snapW, (float)snapH};
+
+    }
+    float srcW = exactW * renderScale * 2.0f;
+    float srcH = exactH * renderScale * 2.0f;
+    float srcY = (float)tile->texture.texture.height - srcH;
+    Rectangle source = {0, srcY, srcW, -srcH};
+
+    DrawTexturePro(tile->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+    
+}
 void BeginPageClipping(float pageWidth, float pageHeight, float pageYOffset, Camera2D camera){
     Vector2 tl = GetWorldToScreen2D((Vector2){0.0f, pageYOffset}, camera);
     Vector2 br = GetWorldToScreen2D((Vector2){pageWidth, pageYOffset + pageHeight}, camera);
@@ -283,51 +341,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
                     Tile *tile = &layer->tiles[tileIdx];
 
                     if (tile->isAllocated && tile->texture.id != 0) {
-                        float exactX = col * logicalTileSize;
-                        float exactY = pageYOffset + (row * logicalTileSize);
-                        float exactW = logicalTileSize;
-                        float exactH = logicalTileSize;
-
-                        Vector2 tileScreenPos = GetWorldToScreen2D((Vector2){exactX, exactY}, camera);
-                        float tileScreenScaledSize = exactW * camera.zoom;
-                        if (tileScreenPos.y > GetScreenHeight() || 
-                            tileScreenPos.y + tileScreenScaledSize < 0 ||
-                            tileScreenPos.x > GetScreenWidth() ||
-                            tileScreenPos.x + tileScreenScaledSize < 0) {
-                            continue;
-                        }
-                        
-                        if (exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
-                        if ((exactY - pageYOffset) + exactH > doc->pageHeight) exactH = doc->pageHeight - (exactY - pageYOffset);
-
-                        Vector2 tlWorld = { exactX, exactY };
-                        Vector2 brWorld = { exactX + exactW, exactY + exactH };
-
-                        Vector2 tlScreen = GetWorldToScreen2D(tlWorld, camera);
-                        Vector2 brScreen = GetWorldToScreen2D(brWorld, camera);
-
-                        tlScreen.x = roundf(tlScreen.x);
-                        tlScreen.y = roundf(tlScreen.y);
-                        brScreen.x = roundf(brScreen.x);
-                        brScreen.y = roundf(brScreen.y);
-
-                        Vector2 snappedTl = GetScreenToWorld2D(tlScreen, camera);
-                        Vector2 snappedBr = GetScreenToWorld2D(brScreen, camera);
-
-                        Rectangle destination = {
-                            snappedTl.x,
-                            snappedTl.y,
-                            snappedBr.x - snappedTl.x,
-                            snappedBr.y - snappedTl.y
-                        };
-
-                        float srcW = exactW * doc->renderScale * 2.0f;
-                        float srcH = exactH * doc->renderScale * 2.0f;
-                        float srcY = (float)tile->texture.texture.height - srcH;
-
-                        Rectangle source = { 0, srcY, srcW, -srcH };
-
-                        DrawTexturePro(tile->texture.texture, source, destination, (Vector2){0,0}, 0.0f, WHITE);
+                        DrawTile(tile, col, row, logicalTileSize, pageYOffset, doc->pageWidth, doc->pageHeight, doc->renderScale, &camera);
                     }
                 }
             }
@@ -405,22 +419,7 @@ void RenderWorkspace(Document *doc, Settings* settings, Camera2D camera,
                     Tile *tile = &layer->tiles[tileIdx];
 
                     if(tile->isAllocated && tile->texture.id != 0){
-                        float exactX = col * logicalTileSize;
-                        float exactY = row * logicalTileSize;
-                        float exactW = logicalTileSize;
-                        float exactH = logicalTileSize;
-
-                        if(exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
-                        if(exactY + exactH > doc->pageHeight) exactH = doc->pageHeight - exactY;
-
-                        Rectangle dest = {exactX, exactY, exactW + 0.5f, exactH + 0.5f};
-
-                        float srcW = exactW * doc->renderScale * 2.0f;
-                        float srcH = exactH * doc->renderScale * 2.0f;
-                        float srcY = (float)tile->texture.texture.height - srcH;
-
-                        Rectangle src = {0, srcY, srcW, -srcH};
-                        DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
+                        DrawTile(tile, col, row, logicalTileSize, floatY, doc->pageWidth, doc->pageHeight, doc->renderScale, &camera);
                     }
                 }
             }
@@ -469,30 +468,7 @@ void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
                     Tile *tile = &layer->tiles[tileIdx];
 
                    if (tile->isAllocated && tile->texture.id != 0) {
-                        float exactX = col * logicalTileSize;
-                        float exactY = row * logicalTileSize;
-                        float exactW = logicalTileSize;
-                        float exactH = logicalTileSize;
-
-                        if (exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
-                        if (exactY + exactH > doc->pageHeight) exactH = doc->pageHeight - exactY;
-
-                        int snapX = (int)roundf(exactX);
-                        int snapY = (int)roundf(exactY);
-                        int snapNextX = (int)roundf(exactX + exactW);
-                        int snapNextY = (int)roundf(exactY + exactH);
-                        int snapW = snapNextX - snapX;
-                        int snapH = snapNextY - snapY;
-
-                        Rectangle dest = { (float)snapX, (float)snapY, (float)snapW, (float)snapH };
-
-                        float srcW = exactW * doc->renderScale * 2.0f;
-                        float srcH = exactH * doc->renderScale * 2.0f;
-                        float srcY = (float)tile->texture.texture.height - srcH;
-
-                        Rectangle src = { 0, srcY, srcW, -srcH };
-
-                        DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
+                        DrawTile(tile, col, row, logicalTileSize, 0.0f, doc->pageWidth, doc->pageHeight, doc->renderScale, NULL);
                     }
                 }
             }
