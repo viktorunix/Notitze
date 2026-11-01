@@ -118,14 +118,13 @@ int main(void){
             if(frameSinceLastActivity > activeFPS)
                 SetTargetFPS(idleFPS);
         }
-
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
         if(appState == STATE_MENU){
-            BeginDrawing();
             if(UpdateDrawMainMenu(doc)){
                 appState = STATE_EDITOR;
                 InitViewport(&vp, doc->pageWidth);
             }
-            EndDrawing();
         }
         else{
 
@@ -167,14 +166,18 @@ int main(void){
 
 
 
-             RenderApplication(doc, &settings, vp.camera, draggedPage, dragOffsetY,
-                      mousePos, vp.mouseWorldPos, vp.localMousePos,
-                      guiClicked, vp.isMouseInsideCanvas, &listeningForBind, &appState);
+            // RenderApplication(doc, &settings, vp.camera, draggedPage, dragOffsetY,
+            //          mousePos, vp.mouseWorldPos, vp.localMousePos,
+            //          guiClicked, vp.isMouseInsideCanvas, &listeningForBind, &appState);
 
+            RenderWorkspace(doc, &settings, vp.camera, draggedPage, dragOffsetY,
+            vp.mouseWorldPos, guiClicked, vp.isMouseInsideCanvas);
+            RenderUI(doc, &settings, mousePos, &listeningForBind, &appState);
             if(appState == STATE_MENU){
                 InitMainMenu();
             }
         }
+        EndDrawing();
     }
     SaveSettings(settings);
     FreeDocument(doc);

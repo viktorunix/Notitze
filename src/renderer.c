@@ -357,36 +357,29 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
 }
 
-void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
-                       int draggedPage, float dragOffsetY,
-                       Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos,
-                       bool guiClicked, bool isMouseInsideCanvas,
-                       BindState* listeningForBind, AppState *appState) {
-
-    BeginDrawing();
-    ClearBackground(DARKGRAY);
+void RenderWorkspace(Document *doc, Settings* settings, Camera2D camera,
+                int draggedPage, float dragOffsetY, Vector2 mouseWorldPos,
+                bool guiClicked, bool isMouseInsieCanvas){
 
     BeginMode2D(camera);
-
-    float screenTopWorldY = GetScreenToWorld2D((Vector2){0, 0}, camera).y;
+    float screenTopWorldY = GetScreenToWorld2D((Vector2){0,0}, camera).y;
     float screenBottomWorldY = GetScreenToWorld2D((Vector2){0, GetScreenHeight()}, camera).y;
-
+    
     float pageStride = doc->pageHeight + PAGE_GAP;
-    int startPage = (int)floor(screenTopWorldY / pageStride);
-    int endPage   = (int)floor(screenBottomWorldY / pageStride);
+    int startPage = (int)floor(screenTopWorldY/pageStride);
+    int endPage = (int)floor(screenBottomWorldY/pageStride);
 
-    startPage -= 2;
-    endPage += 2;
+    startPage -=2;
+    endPage +=2;
 
     if (startPage < 0) startPage = 0;
     if (endPage >= doc->pageCount) endPage = doc->pageCount - 1;
 
-    for (int p = startPage; p <= endPage; p++) {
-        if (p == draggedPage) continue;
+    for(int p = startPage; p < endPage; p++){
+        if(p == draggedPage) continue;
         float pageYOffset = p * pageStride;
         GUIPage(doc, &currentStroke, p, pageYOffset, camera);
     }
-
 
     if(draggedPage != -1){
         float floatY = mouseWorldPos.y - dragOffsetY;
@@ -395,8 +388,8 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
         DrawPageBackground(doc, doc->pattern, floatY);
         DrawRectangle(0, floatY, doc->pageWidth, 40, SKYBLUE);
 
-       BeginPageClipping(doc->pageWidth, doc->pageHeight, floatY, camera);
-        
+        BeginPageClipping(doc->pageWidth, doc->pageHeight, floatY, camera);
+
         Page *page = &doc->pages[draggedPage];
         for(int l = 0; l < page->layerCount; l++){
             Layer *layer = &page->layers[l];
@@ -406,28 +399,27 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
             BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
             float logicalTileSize = TILE_SIZE / doc->renderScale;
 
-            for (int row = 0; row < layer->gridRows; row++) {
-                for (int col = 0; col < layer->gridCols; col++) {
+            for(int row = 0; row < layer->gridRows; row++){
+                for(int col = 0; col < layer->gridCols; col++){
                     int tileIdx = (row * layer->gridCols) + col;
                     Tile *tile = &layer->tiles[tileIdx];
 
-                    if (tile->isAllocated && tile->texture.id != 0) {
+                    if(tile->isAllocated && tile->texture.id != 0){
                         float exactX = col * logicalTileSize;
                         float exactY = row * logicalTileSize;
                         float exactW = logicalTileSize;
                         float exactH = logicalTileSize;
 
-                        if (exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
-                        if (exactY + exactH > doc->pageHeight) exactH = doc->pageHeight - exactY;
+                        if(exactX + exactW > doc->pageWidth) exactW = doc->pageWidth - exactX;
+                        if(exactY + exactH > doc->pageHeight) exactH = doc->pageHeight - exactY;
 
-                        Rectangle dest = { exactX, exactY, exactW + 0.5f, exactH + 0.5f };
+                        Rectangle dest = {exactX, exactY, exactW + 0.5f, exactH + 0.5f};
 
                         float srcW = exactW * doc->renderScale * 2.0f;
                         float srcH = exactH * doc->renderScale * 2.0f;
                         float srcY = (float)tile->texture.texture.height - srcH;
 
-                        Rectangle src = { 0, srcY, srcW, -srcH };
-
+                        Rectangle src = {0, srcY, srcW, -srcH};
                         DrawTexturePro(tile->texture.texture, src, dest, (Vector2){0,0}, 0.0f, WHITE);
                     }
                 }
@@ -436,29 +428,23 @@ void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
         }
         EndScissorMode();
     }
-
-
-    if(!guiClicked && isMouseInsideCanvas){
+    if(!guiClicked && isMouseInsieCanvas){
         GetActiveBrush()->RenderPreview(doc, mouseWorldPos, settings->currentBrushThickness);
     }
     EndMode2D();
-
-
+}
+void RenderUI(Document *doc, Settings* settings, Vector2 mousePos,
+            BindState* listeningForBind, AppState *appState){
     if(GUIHeaderDock(doc, settings, mousePos)){
         *appState = STATE_MENU;
     }
-
     if(doc->enableLayers && !settings->showSettings){
         GUILayerPanel(doc, currentStroke);
     }
-
     if(settings->showSettings){
         SettingsPage(doc, settings, listeningForBind);
     }
-
-    EndDrawing();
 }
-
 void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath){
     if(pageIndex < 0 || pageIndex >= doc->pageCount) return;
 

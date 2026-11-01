@@ -15,12 +15,12 @@ void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);
 void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera);
-void RenderApplication(Document* doc, Settings* settings, Camera2D camera,
-                       int draggedPage, float dragOffsetY,
-                       Vector2 mousePos, Vector2 mouseWorldPos, Vector2 localMousePos,
-                       bool guiClicked, bool isMouseInsideCanvas,
-                       BindState* listeningForBind, AppState *appState);
 
+void RenderWorkspace(Document* doc, Settings* settings, Camera2D camera,
+                     int draggedPage, float dragOffsetY, Vector2 mouseWorldPos,
+                     bool guiClicked, bool isMouseInsideCanvas);
 
+void RenderUI(Document* doc, Settings* settings, Vector2 mousePos,
+              BindState* listeningForBind, AppState *appState);
 void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath);
 #endif
