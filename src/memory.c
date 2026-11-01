@@ -1,7 +1,63 @@
 #include "include/memory.h"
 #include "include/memory_arena.h"
 #include "include/rlgl.h"
+#include "include/raymath.h"
 #include <math.h>
+
+static float PointSegmentDistance(Vector2 p, Vector2 a, Vector2 b){
+    float l2 = Vector2DistanceSqr(a, b);
+    if(l2 == 0) return Vector2Distance(p, a); //a and b are same
+
+    //t is the projection of the point P on AB and then normalised
+    float t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+    t = fmaxf(0.0f, fminf(1.0f, t));
+
+    Vector2 projection = {a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)};
+    return Vector2Distance(p, projection);
+}
+
+static void RDP_Rec(StrokePoint *points, int startIndex, int endIndex, float epsilon, bool *keepPoint){
+    float maxDistance = 0.0f;
+    int maxIndex = startIndex;
+
+    //finding the point farthest from the segment
+    for(int i = startIndex + 1; i < endIndex; i++){
+        float dist = PointSegmentDistance(points[i].pos, points[startIndex].pos, points[endIndex].pos);
+        if (dist > maxDistance){
+            maxDistance = dist;
+            maxIndex = i;
+        }
+    }
+    
+    //if its too far than epsilon we keep the point
+    if(maxDistance > epsilon){
+        keepPoint[maxIndex] = true;
+
+        RDP_Rec(points, startIndex, maxIndex, epsilon, keepPoint);
+        RDP_Rec(points, maxIndex, endIndex, epsilon, keepPoint);
+    }
+}
+
+void SimplifyStroke(Stroke *stroke, float epsilon){
+    if (stroke->pointCount <= 2) return;
+
+    bool *keepPoint = (bool *)ArenaAlloc(&activeStrokeArena, stroke->pointCount * sizeof(bool));
+    if(!keepPoint) return;
+
+    keepPoint[0] = true;
+    keepPoint[stroke->pointCount - 1] = true;
+
+    RDP_Rec(stroke->points, 0, stroke->pointCount - 1, epsilon, keepPoint);
+
+    int newCount = 0;
+    for(int i = 0; i < stroke->pointCount; i++){
+        if(keepPoint[i]){
+            stroke->points[newCount++] = stroke->points[i];
+        }
+    }
+
+    stroke->pointCount = newCount;
+}
 RenderTexture2D LoadRenderTexture2DOnly(int width, int height){
     RenderTexture2D target = {0};
     target.id = rlLoadFramebuffer();

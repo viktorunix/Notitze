@@ -23,6 +23,9 @@ void MoveActivePageDown(Document *doc){
 }
 
 void FinishStroke(Stroke *currentStroke, Document *doc){
+    float rdpTolerance = 1.0f;
+    SimplifyStroke(currentStroke, rdpTolerance);
+
     if(currentStroke->pointCount > 0 && currentStroke->points != NULL){
         StrokePoint *permanentPoints = (StrokePoint*)malloc(currentStroke->pointCount * sizeof(StrokePoint));
         memcpy(permanentPoints, currentStroke->points, currentStroke->pointCount * sizeof(StrokePoint));
