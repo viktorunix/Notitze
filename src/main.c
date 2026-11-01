@@ -26,6 +26,49 @@ Stroke currentStroke = {0};
 Color currentBrushColor = BLACK;
 float currentBrushThickness = 3.0f;
 
+bool UpdateEditorState(Document *doc, Settings *settings, Viewport *vp,
+int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeningForBind, Color *pallete){
+    Vector2 mousePos = GetMousePosition();
+
+    int barWidth = 1000;
+    int barHeight = 140;
+    int barY = 20;
+    int barX = (GetScreenWidth() - barWidth) / 2;
+
+    Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
+    bool guiClicked = settings->showSettings;
+    bool layerHovered = false;
+
+    //verifying if the layer panel was clicked
+    if(doc->enableLayers && !settings->showSettings){
+        int pH = 60 + (doc->pages[doc->activePage].layerCount * 40) + (doc->pages[doc->activePage].layerCount > 1 ? 50 : 0);
+        Rectangle layerBounds = {(float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
+        layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
+    }
+    bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
+    guiClicked = settings->showSettings || uiHovered;
+
+    //updating shortcuts and input
+    SettingsBinds(listeningForBind, settings);
+    InputHandler(doc, settings, listeningForBind);
+
+    //preventing accidental drawing uner the tool docker
+    if(mousePos.y < (barY + barHeight) && !settings->showSettings){
+        guiClicked = true;
+    }
+    //updating the active brush
+    currentBrushColor = pallete[settings->selectedColorIndex];
+    SetActiveBrush(doc->activeBrush);
+    settings->currentBrushThicknessIndex = doc->activeBrush;
+    settings->currentBrushColorsIndex = doc->activeBrush;
+    currentBrushThickness = settings->currentBrushThicknesses[settings->currentBrushThicknessIndex];
+    currentBrushColor = settings->pallete[settings->currentBrushColors[settings->currentBrushColorsIndex]];
+
+    //sending the state of viewport and the drawing process
+    UpdateViewportMath(vp, doc, mousePos, guiClicked);
+    ProcessInputs(doc, vp, guiClicked, draggedPage, dragOffsetY, currentPressure);
+    return guiClicked;
+}
 int main(void){
     InitCommandSystem();
     InitBrushSystem();
@@ -127,52 +170,12 @@ int main(void){
             }
         }
         else{
-
-             Vector2 mousePos = GetMousePosition();
-             Vector2 mouseWorldPos = GetScreenToWorld2D(mousePos, camera);
-
-             int barX = (GetScreenWidth() - barWidth / 2);
-             Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
-             bool guiClicked = settings.showSettings;
-             bool layerHovered = false;
-             if(doc->enableLayers && !settings.showSettings){
-                 int pH = 60 + (doc->pages[doc->activePage].layerCount * 40) + (doc->pages[doc->activePage].layerCount > 1 ? 50 : 0);
-                 Rectangle layerBounds = { (float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
-                 layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
-             }
-             bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
-             guiClicked = settings.showSettings || uiHovered;
-             SettingsBinds(&listeningForBind, &settings);
-             InputHandler(doc, &settings, &listeningForBind);
-
-             // ui bar
-             if(mousePos.y < UI_HEIGHT && !settings.showSettings){
-                 guiClicked = true;
-             }
-
-             currentBrushColor = pallete[settings.selectedColorIndex];
-
-             SetActiveBrush(doc->activeBrush);
-             settings.currentBrushThicknessIndex = doc->activeBrush;
-             settings.currentBrushColorsIndex = doc->activeBrush;
-             currentBrushThickness = settings.currentBrushThicknesses[settings.currentBrushThicknessIndex];
-             currentBrushColor = settings.pallete[settings.currentBrushColors[settings.currentBrushColorsIndex]];
-
-             UpdateViewportMath(&vp, doc, mousePos, guiClicked);
-
-             ProcessInputs(doc, &vp, guiClicked, &draggedPage, &dragOffsetY, &currentPressure);
-
-
-
-
-
-            // RenderApplication(doc, &settings, vp.camera, draggedPage, dragOffsetY,
-            //          mousePos, vp.mouseWorldPos, vp.localMousePos,
-            //          guiClicked, vp.isMouseInsideCanvas, &listeningForBind, &appState);
-
+            bool guiClicked = UpdateEditorState(doc, &settings, &vp, &draggedPage, &dragOffsetY, &currentPressure, &listeningForBind, pallete);
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
             RenderWorkspace(doc, &settings, vp.camera, draggedPage, dragOffsetY,
             vp.mouseWorldPos, guiClicked, vp.isMouseInsideCanvas);
-            RenderUI(doc, &settings, mousePos, &listeningForBind, &appState);
+            RenderUI(doc, &settings, GetMousePosition(), &listeningForBind, &appState);
             if(appState == STATE_MENU){
                 InitMainMenu();
             }
