@@ -279,9 +279,13 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     }
     curX += 100 + gap;
     if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Exp PNG", false)){
-        EndDrawing();
-        ExportPageToPNG(doc, doc->activePage, "Exported_Page.png");
-        BeginDrawing();
+        const char *filepath = ShowExportPNGDialog(); 
+        if (filepath != NULL) {
+            EndDrawing(); 
+            ExportPageToPNG(doc, doc->activePage, filepath);
+            BeginDrawing(); 
+            ClearBackground(DARKGRAY); 
+        }
     }
     curX += 100 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Import", false)){

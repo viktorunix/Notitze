@@ -51,4 +51,6 @@ void SaveToNotebook(const char *notebookPath, Document *doc);
 void LoadFromNotebook(const char *notebookPath, int index, Document *doc);
 
 void CacheTexture(const char* filename, Texture2D texture);
+
+const char* ShowExportPNGDialog();
 #endif

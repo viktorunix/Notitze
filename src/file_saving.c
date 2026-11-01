@@ -564,3 +564,49 @@ void CacheTexture(const char* filename, Texture2D texture){
     fwrite(&texture, sizeof(Texture2D),1,f);
     fclose(f);
 }
+
+const char *ShowExportPNGDialog(){
+#ifdef _WIN32
+    static char filename[MAX_PATH] = "";
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFilter = "PNG Image (*.png)\0*All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+    ofn.lpstrDefExt = "png";
+    if(GetSaveFileNameA(&ofn)) return filename;
+#elif defined(__linux__)
+    static char filename[1024] = "";
+    filename[0] = '\0';
+    int status = system("zenity --file-selection --save --confirm-overwrite --title=\"Export PNG\" --file-filter=\"*.png\" > /tmp/png_save_path.tmp 2>/dev/null");
+
+    if (status != 0) {
+        remove("/tmp/png_save_path.tmp");
+        return NULL;
+    }
+
+    FILE *f = fopen("/tmp/png_save_path.tmp", "r");
+    if (f) {
+        if (fgets(filename, sizeof(filename), f) != NULL) {
+            filename[strcspn(filename, "\n")] = '\0';
+        }
+        fclose(f);
+        remove("/tmp/png_save_path.tmp");
+    }
+
+    if (strlen(filename) > 0) {
+        size_t len = strlen(filename);
+        if (len > 0 && (len < 4 || strcmp(filename + len - 4, ".png") != 0)) {
+            if (len + 5 < sizeof(filename)) {
+                strcat(filename, ".png");
+            }
+        }
+        return filename;
+    }
+    return NULL;
+#endif
+    return NULL;
+}
