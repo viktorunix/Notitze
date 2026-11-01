@@ -9,6 +9,74 @@
 #define PAGE_GAP 60
 
 extern Stroke currentStroke;
+void ManageTileMemory(Document *doc, Camera2D camera){
+    //calculating the visibility
+    float screenTopWorldY = GetScreenToWorld2D((Vector2){0,0}, camera).y;
+    float screenBottomWorldY = GetScreenToWorld2D((Vector2){0, GetScreenHeight()}, camera).y;
+    float pageStride = doc->pageHeight + PAGE_GAP;
+
+    // keeping 1 page above and below the view
+    int startPage = (int)floor(screenTopWorldY / pageStride) - 1;
+    int endPage = (int)floor(screenBottomWorldY / pageStride) + 1;
+
+    int bakedThisFrame = 0;
+    const int MAX_BAKES_PER_FRAME = 2; //2 tiles per frame
+    for (int p = 0; p < doc->pageCount; p++){
+        bool isVisible = (p >= startPage && p <=endPage) || (p == doc->activePage);
+        Page *page = &doc->pages[p];
+
+        for (int l = 0; l < page->layerCount; l++){
+            Layer *layer = &page->layers[l];
+            if (!layer->tiles) continue;
+
+            int totalTiles = layer->gridCols * layer->gridRows;
+            for(int t = 0; t < totalTiles; t++){
+                Tile *tile = &layer->tiles[t];
+
+                if(!isVisible) {
+                    if(tile->isAllocated) {
+                        UnloadRenderTexture(tile->texture);
+                        tile->isAllocated = false;
+                    }
+                } else {
+                    if(!tile->isAllocated && tile->strokeCount > 0) {
+                        if(bakedThisFrame >= MAX_BAKES_PER_FRAME) continue;
+                        tile->texture = LoadRenderTexture2DOnly(TILE_SIZE * 2, TILE_SIZE * 2);
+                        SetTextureFilter(tile->texture.texture, TEXTURE_FILTER_BILINEAR);
+                        tile->isAllocated = true;
+
+                        BeginTextureMode(tile->texture);
+                        ClearBackground(BLANK);
+
+                        int col = t % layer->gridCols;
+                        int row = t / layer->gridCols;
+
+                        Camera2D tileCam = {0};
+                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f)};
+                        tileCam.zoom = doc->renderScale * 2.0f;
+
+                        BeginMode2D(tileCam);
+                        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+
+                        for(int idx = 0; idx < tile->strokeCount; idx++){
+                            int sIdx = tile->strokeIndices[idx];
+                            RenderStroke(*doc, &layer->strokes[sIdx], 0);
+                        }
+                        EndBlendMode();
+                        EndMode2D();
+                        EndTextureMode();
+                        bakedThisFrame++;
+                    }
+
+                    if(tile->isAllocated && tile->strokeCount == 0){
+                        UnloadRenderTexture(tile->texture);
+                        tile->isAllocated = false;
+                    }
+                }
+            }
+        }
+    }
+}
 Texture2D GenerateSmoothBrush(void){
     int size = 128;
     Image img = GenImageColor(size, size, BLANK);

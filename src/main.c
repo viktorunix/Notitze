@@ -167,6 +167,11 @@ int main(void){
             if(frameSinceLastActivity > activeFPS)
                 SetTargetFPS(idleFPS);
         }
+        bool guiClicked = false;
+        if(appState == STATE_EDITOR){
+            guiClicked = UpdateEditorState(doc, &settings, &vp, &draggedPage,&dragOffsetY, &currentPressure, &listeningForBind, pallete);
+            ManageTileMemory(doc, vp.camera);
+        }
         BeginDrawing();
         ClearBackground(DARKGRAY);
         if(appState == STATE_MENU){
@@ -176,7 +181,7 @@ int main(void){
             }
         }
         else{
-            bool guiClicked = UpdateEditorState(doc, &settings, &vp, &draggedPage, &dragOffsetY, &currentPressure, &listeningForBind, pallete);
+            
         
             RenderWorkspace(doc, &settings, vp.camera, draggedPage, dragOffsetY,
             vp.mouseWorldPos, guiClicked, vp.isMouseInsideCanvas);

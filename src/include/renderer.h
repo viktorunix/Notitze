@@ -23,4 +23,5 @@ void RenderWorkspace(Document* doc, Settings* settings, Camera2D camera,
 void RenderUI(Document* doc, Settings* settings, Vector2 mousePos,
               BindState* listeningForBind, AppState *appState);
 void ExportPageToPNG(Document *doc, int pageIndex, const char *filepath);
+void ManageTileMemory(Document *doc, Camera2D camera);
 #endif
