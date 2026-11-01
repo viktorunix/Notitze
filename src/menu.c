@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdio.h>
 
+
+
 static NotebookIndex libraryIdx = {0};
 
 static bool showNewModal = false;
@@ -16,12 +18,20 @@ static float customH = 1754.0f;
 
 static char newDocName[64] = "New Note";
 static bool isTypingName = false;
+
+
 void InitMainMenu(void){
     libraryIdx = ScanNotebook("Library.ntzbook");
 }
 
 bool UpdateDrawMainMenu(Document *doc){
+    
     ClearBackground((Color){30,30,35,255});
+
+    // Constantele meniului contextual mutate aici, accesibile peste tot în funcție
+    const int menuWidth = 150;
+    const int itemHeight = 35;
+    const int menuHeight = CTX_OPTION_COUNT * itemHeight;
 
     //top bar
     DrawRectangle(0,0, GetScreenWidth(), 80, (Color){40,40,45,255});
@@ -30,10 +40,36 @@ bool UpdateDrawMainMenu(Document *doc){
     //path breadcrumbs
     DrawText("Library.ntzbook", 40, 100, 20, LIGHTGRAY);
 
-   //new document
-   if(!showNewModal && GUIButton((Rectangle){GetScreenWidth() - 180, 20, 140, 40}, "+ New Note", false)){
-       showNewModal = true;
+    if (ctxMenu.isActive) {
+        Rectangle menuBounds = {ctxMenu.position.x, ctxMenu.position.y, menuWidth, menuHeight};
+        Vector2 mousePos = GetMousePosition();
 
+        ctxMenu.hoveredOption = CTX_NONE;
+        if (CheckCollisionPointRec(mousePos, menuBounds)) {
+            ctxMenu.hoveredOption = (mousePos.y - menuBounds.y) / itemHeight;
+        }
+        
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            if(ctxMenu.hoveredOption != CTX_NONE) {
+                switch (ctxMenu.hoveredOption){
+                    case CTX_RENAME:
+                        printf("renaming the file %d\n", ctxMenu.targetDocIndex);
+                        break;
+                    case CTX_DELETE:
+                        printf("deleting thefile %d\n", ctxMenu.targetDocIndex);
+                        break;
+                    case CTX_EXPORT:
+                        printf("exporting the file %d\n", ctxMenu.targetDocIndex);
+                        break;
+                }
+            }
+            ctxMenu.isActive = false; // Închidem meniul indiferent unde am dat click
+        }
+    }
+
+   //new document
+   if(!showNewModal && !ctxMenu.isActive && GUIButton((Rectangle){GetScreenWidth() - 180, 20, 140, 40}, "+ New Note", false)){
+       showNewModal = true;
        snprintf(newDocName, sizeof(newDocName), "Note %d", libraryIdx.count + 1);
        isTypingName = false;
    }
@@ -46,9 +82,18 @@ bool UpdateDrawMainMenu(Document *doc){
    int itemH = 180;
 
    for(int i = 0 ; i<libraryIdx.count; i++){
+       
        Rectangle itemBounds = {x, y, itemW, itemH};
-       bool isHovered = !showNewModal && CheckCollisionPointRec(GetMousePosition(), itemBounds);
+       bool isHovered = !showNewModal && !ctxMenu.isActive && CheckCollisionPointRec(GetMousePosition(), itemBounds);
 
+       if (!ctxMenu.isActive && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && CheckCollisionPointRec(GetMousePosition(), itemBounds)) {
+           ctxMenu.isActive = true;
+           ctxMenu.position = GetMousePosition();
+           ctxMenu.targetDocIndex = i; 
+           
+           if (ctxMenu.position.x + menuWidth > GetScreenWidth()) ctxMenu.position.x -= menuWidth;
+           if (ctxMenu.position.y + menuHeight > GetScreenHeight()) ctxMenu.position.y -= menuHeight;
+       }
 
        DrawRectangleRounded(itemBounds, 0.1f, 8, isHovered ? (Color){60,60,65,255}:(Color){45,45,50,255});
 
@@ -67,7 +112,6 @@ bool UpdateDrawMainMenu(Document *doc){
 
        DrawText(displayName, x + (itemW - MeasureText(displayName, 15))/2, y + 140, 15, WHITE);
 
-       //click hangler
        if(isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
            LoadFromNotebook("Library.ntzbook", i, doc);
            return true;
@@ -80,6 +124,7 @@ bool UpdateDrawMainMenu(Document *doc){
            y += itemH +30;
        }
    }
+   
    if(showNewModal){
        DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
 
@@ -96,6 +141,7 @@ bool UpdateDrawMainMenu(Document *doc){
        //texbox for document name
        DrawText("Name:", mX + 20, mY + 70, 20, LIGHTGRAY);
        GUITextBox((Rectangle){mX + 90, mY + 60, 310,40}, newDocName, 64, &isTypingName);
+       
        // format selection
        if(GUIButton((Rectangle){mX + 20, mY + 120, 80,35}, "A4", selectedFormat == FORMAT_A4)) selectedFormat = FORMAT_A4;
        if(GUIButton((Rectangle){mX + 110, mY + 120, 80,35}, "A5", selectedFormat== FORMAT_A5)) selectedFormat = FORMAT_A5;
@@ -112,23 +158,19 @@ bool UpdateDrawMainMenu(Document *doc){
             GUISlider((Rectangle){mX + 100, mY + 240, 200, 20}, &customH, 500.0f, 4000.0f);
             DrawText(TextFormat("%.0f", customH), mX + 320, mY + 240, 20, WHITE);
        }else {
-            // Display Standard Sizes
             float w = 0, h = 0;
             if (selectedFormat == FORMAT_A4) { w = 1240; h = 1754; }
             else if (selectedFormat == FORMAT_A5) { w = 874; h = 1240; }
             else if (selectedFormat == FORMAT_LETTER) { w = 1275; h = 1650; }
             DrawText(TextFormat("Canvas Size: %.0f x %.0f px", w, h), mX + 20, mY + 220, 20, LIGHTGRAY);
         }
+       
        // buttons
        if (GUIButton((Rectangle){mX + 20, mY + mHeight - 60, 170, 40}, "Cancel", false)) {
-            showNewModal = false; // Close without doing anything
+            showNewModal = false; 
         }
         if (GUIButton((Rectangle){mX + 210, mY + mHeight - 60, 170, 40}, "Create", false)) {
-            showNewModal = false; // Close modal
-
-            //extern void FreeDocument(Document *doc);
-            //extern void AddPageToDocument(Document *doc);
-
+            showNewModal = false; 
 
             Texture2D tempBrush = doc->brushTex;
             Texture2D tempPencil = doc->pencilTex;
@@ -140,23 +182,11 @@ bool UpdateDrawMainMenu(Document *doc){
             doc->brushTex = tempBrush;
             doc->pencilTex = tempPencil;
 
-
             if (selectedFormat == FORMAT_A4) { doc->pageWidth = 1240.0f; doc->pageHeight = 1754.0f; doc->pageFormat = FORMAT_A4; }
             else if (selectedFormat == FORMAT_A5) { doc->pageWidth = 874.0f; doc->pageHeight = 1240.0f; doc->pageFormat = FORMAT_A5; }
             else if (selectedFormat == FORMAT_LETTER) { doc->pageWidth = 1275.0f; doc->pageHeight = 1650.0f; doc->pageFormat = FORMAT_LETTER; }
             else { doc->pageWidth = customW; doc->pageHeight = customH; doc->pageFormat = FORMAT_CUSTOM; }
 
-            //doc->ppi = 150;
-            //doc->pattern = BG_BLANK;
-            //doc->patternSpacing = 30.0f;
-            //doc->patternColor = (Color){200, 215, 230, 255};
-            //doc->renderScale = 2.0f;
-
-            //doc->useBakedRendering = true;
-            //doc->pressureEnabled = true;
-            //doc->enableLayers = false;
-
-            //doc->notebookIndex = -1;
             if(strlen(newDocName) > 0){
                 snprintf(doc->documentTitle, sizeof(doc->documentTitle), "%s", newDocName);
             } else{
@@ -166,5 +196,28 @@ bool UpdateDrawMainMenu(Document *doc){
             return true;
         }
    }
+   
+    if (ctxMenu.isActive) {
+        Rectangle menuBounds = { ctxMenu.position.x, ctxMenu.position.y, menuWidth, menuHeight };
+
+        DrawRectangle(menuBounds.x + 4, menuBounds.y + 4, menuWidth, menuHeight, Fade(BLACK, 0.3f));
+        DrawRectangleRec(menuBounds, RAYWHITE);
+        DrawRectangleLinesEx(menuBounds, 1, LIGHTGRAY); 
+
+        for (int i = 0; i < CTX_OPTION_COUNT; i++) {
+            Rectangle itemBounds = { menuBounds.x, menuBounds.y + (i * itemHeight), menuWidth, itemHeight };
+            
+            if (ctxMenu.hoveredOption == i) {
+                DrawRectangleRec(itemBounds, Fade(SKYBLUE, 0.4f)); 
+            }
+
+            Color textColor = (i == CTX_DELETE) ? RED : DARKGRAY;
+            DrawText(ctxOptions[i], itemBounds.x + 15, itemBounds.y + (itemHeight / 2) - 10, 20, textColor);
+            
+            if (i < CTX_OPTION_COUNT - 1) {
+                DrawLine(itemBounds.x + 10, itemBounds.y + itemHeight, itemBounds.x + menuWidth - 10, itemBounds.y + itemHeight, LIGHTGRAY);
+            }
+        }
+    }
    return false;
 }
