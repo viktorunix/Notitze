@@ -5,6 +5,7 @@
 #include "include/brush_engine.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define MAX_UNDO 50
 
@@ -15,21 +16,12 @@ void InitCommandSystem(void){
     undoTop= 0;
 }
 
-static void DeepCopyStroke(Stroke *dest, Stroke *src){
-    *dest = *src;
-    if(src->pointCount > 0){
-        dest->points = (StrokePoint*)malloc(src->pointCount * sizeof(StrokePoint));
-        memcpy(dest->points, src->points, src->pointCount * sizeof(StrokePoint));
-        dest->capacity = src->capacity;
-    } else{
-        dest->points = NULL;
-    }
-}
-
 void PushDrawCommand(int page, int layer, Stroke *stroke){
     if(undoTop >= MAX_UNDO){
-        if(undoStack[0].strokeData.points)
+        // Curățăm memoria dacă o comandă ERASE iese din stivă
+        if(undoStack[0].type == CMD_ERASE_STROKE && undoStack[0].strokeData.points){
             free(undoStack[0].strokeData.points);
+        }
         for(int i = 0; i <MAX_UNDO - 1; i++)
             undoStack[i] = undoStack[i+1];
         undoTop--;
@@ -39,15 +31,18 @@ void PushDrawCommand(int page, int layer, Stroke *stroke){
     cmd.type = CMD_DRAW_STROKE;
     cmd.pageIndex = page;
     cmd.layerIndex = layer;
-    DeepCopyStroke(&cmd.strokeData, stroke);
+    
+    cmd.strokeData = *stroke;
 
     undoStack[undoTop++] = cmd;
 }
 
 void PushEraseCommand(int page, int layer, Stroke *stroke, int index){
     if (undoTop >= MAX_UNDO) {
-        if (undoStack[0].strokeData.points)
+        if(undoStack[0].type == CMD_ERASE_STROKE && undoStack[0].strokeData.points){
             free(undoStack[0].strokeData.points);
+        }
+        
         for(int i = 0; i < MAX_UNDO - 1; i++)
             undoStack[i] = undoStack[i+1];
         undoTop--;
@@ -57,7 +52,8 @@ void PushEraseCommand(int page, int layer, Stroke *stroke, int index){
     cmd.pageIndex = page;
     cmd.layerIndex = layer;
     cmd.strokeIndex = index;
-    DeepCopyStroke(&cmd.strokeData, stroke);
+    
+    cmd.strokeData = *stroke;
 
     undoStack[undoTop++] = cmd;
 }
@@ -74,51 +70,64 @@ void UndoCommand(Document *doc){
     Layer *layer = &page->layers[cmd.layerIndex];
 
     if(cmd.type == CMD_DRAW_STROKE){
-        StrokeAABB bounds = CalculateStrokeAABB(&layer->strokes[layer->strokeCount - 1]);
-        
-        RemoveStrokeFromLayer(layer, layer->strokeCount - 1);
-        if(cmd.strokeData.points)
-            free(cmd.strokeData.points);
-            
+        if (layer->strokeCount <= 0) return; // Siguranță maximă
+
+        int removedIndex = layer->strokeCount - 1;
+        StrokePoint *pointsToFree = layer->strokes[removedIndex].points;
+
         if(doc->useBakedRendering && layer->tiles != NULL){
-            int startCol = (int)floor((bounds.minX * doc->renderScale) / TILE_SIZE);
-            int endCol   = (int)floor((bounds.maxX * doc->renderScale) / TILE_SIZE);
-            int startRow = (int)floor((bounds.minY * doc->renderScale) / TILE_SIZE);
-            int endRow   = (int)floor((bounds.maxY * doc->renderScale) / TILE_SIZE);
+            int totalTiles = layer->gridCols * layer->gridRows;
+            
+            // Scanăm TOATE tile-urile pentru a elimina garantat indexul, 
+            // evitând erorile de calcul AABB care lăsau dangling pointers.
+            for (int t = 0; t < totalTiles; t++) {
+                Tile *tile = &layer->tiles[t];
+                if (!tile->isAllocated) continue;
 
-            if (startCol < 0) startCol = 0; if (startRow < 0) startRow = 0;
-            if (endCol >= layer->gridCols) endCol = layer->gridCols - 1;
-            if (endRow >= layer->gridRows) endRow = layer->gridRows - 1;
+                int keepCount = 0;
+                bool needsRebake = false;
 
-            for (int row = startRow; row <= endRow; row++) {
-                for (int col = startCol; col <= endCol; col++) {
-                    int tileIndex = (row * layer->gridCols) + col;
-                    Tile *tile = &layer->tiles[tileIndex];
-
-                    if (tile->isAllocated) {
-                        BeginTextureMode(tile->texture);
-                        ClearBackground(BLANK); // Curățăm complet tile-ul
-
-                        Camera2D tileCam = {0};
-                        tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f) };
-                        tileCam.zoom = doc->renderScale * 2.0f;
-
-                        BeginMode2D(tileCam);
-                        BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
-
-                        // Redesenăm STRICT liniile rămase valabile pe acest tile
-                        for (int idx = 0; idx < tile->strokeCount; idx++) {
-                            int sIdx = tile->strokeIndices[idx];
-                            RenderStroke(*doc, &layer->strokes[sIdx], 0);
-                        }
-
-                        EndBlendMode();
-                        EndMode2D();
-                        EndTextureMode();
+                for(int k = 0; k < tile->strokeCount; k++) {
+                    if(tile->strokeIndices[k] != removedIndex) {
+                        tile->strokeIndices[keepCount++] = tile->strokeIndices[k];
+                    } else {
+                        needsRebake = true;
                     }
+                }
+                tile->strokeCount = keepCount;
+
+                // Refacem FBO-ul doar dacă am șters efectiv ceva din el
+                if (needsRebake) {
+                    int col = t % layer->gridCols;
+                    int row = t / layer->gridCols;
+
+                    BeginTextureMode(tile->texture);
+                    ClearBackground(BLANK); 
+
+                    Camera2D tileCam = {0};
+                    tileCam.offset = (Vector2){ -(float)(col * TILE_SIZE * 2.0f), -(float)(row * TILE_SIZE * 2.0f) };
+                    tileCam.zoom = doc->renderScale * 2.0f;
+
+                    BeginMode2D(tileCam);
+                    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+
+                    for (int idx = 0; idx < tile->strokeCount; idx++) {
+                        int sIdx = tile->strokeIndices[idx];
+                        RenderStroke(*doc, &layer->strokes[sIdx], 0);
+                    }
+
+                    EndBlendMode();
+                    EndMode2D();
+                    EndTextureMode();
                 }
             }
         }
+        
+        // Înlocuim RemoveStrokeFromLayer pentru a preveni orice double-free ascuns
+        layer->strokeCount--;
+        
+        // Eliberăm memoria abia la final, când suntem siguri că niciun tile nu o mai referențiază
+        if(pointsToFree) free(pointsToFree);
     }
     else if(cmd.type == CMD_ERASE_STROKE){
         if(layer->strokeCount >= layer->capacity){
@@ -184,7 +193,6 @@ void UndoCommand(Document *doc){
                     BeginMode2D(tileCam);
                     BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
 
-                    // Randăm STRICT liniile asignate acestui tile
                     for(int idx = 0; idx < tile->strokeCount; idx++) {
                         int sIdx = tile->strokeIndices[idx];
                         RenderStroke(*doc, &layer->strokes[sIdx], 0);
