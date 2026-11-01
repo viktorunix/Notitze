@@ -1,6 +1,7 @@
 #include "include/doc_management.h"
 #include "include/command_system.h"
 #include "include/paper.h"
+#include "include/memory_arena.h"
 #include <string.h>
 
 void MoveActivePageUp(Document *doc){
@@ -22,6 +23,14 @@ void MoveActivePageDown(Document *doc){
 }
 
 void FinishStroke(Stroke *currentStroke, Document *doc){
+    if(currentStroke->pointCount > 0 && currentStroke->points != NULL){
+        StrokePoint *permanentPoints = (StrokePoint*)malloc(currentStroke->pointCount * sizeof(StrokePoint));
+        memcpy(permanentPoints, currentStroke->points, currentStroke->pointCount * sizeof(StrokePoint));
+
+        currentStroke->points = permanentPoints;
+        currentStroke->capacity = currentStroke->pointCount;
+    }
+    ResetArena(&activeStrokeArena);
     if((currentStroke->type <= BRUSH_PENCIL && currentStroke->pointCount > 1) ||
        (currentStroke->type >= BRUSH_LINE && currentStroke->pointCount == 2) ||
         (currentStroke->type == BRUSH_TEXT && currentStroke->pointCount == 1)){
@@ -82,7 +91,7 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
             }
         }
     } else {
-        free(currentStroke->points);
+        //free(currentStroke->points);
     }
     *currentStroke = (Stroke){0};
 }

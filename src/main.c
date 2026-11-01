@@ -17,6 +17,7 @@
 #include "include/doc_management.h"
 #include "include/menu.h"
 
+#include "include/memory_arena.h"
 #define SAVE_FILE "test.ntz"
 #define PAGE_GAP 60
 
@@ -25,6 +26,7 @@
 Stroke currentStroke = {0};
 Color currentBrushColor = BLACK;
 float currentBrushThickness = 3.0f;
+
 
 bool UpdateEditorState(Document *doc, Settings *settings, Viewport *vp,
 int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeningForBind, Color *pallete){
@@ -70,6 +72,8 @@ int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeni
     return guiClicked;
 }
 int main(void){
+
+    InitArena(&activeStrokeArena, 2 * 1024 * 1024);
     InitCommandSystem();
     InitBrushSystem();
     RegisterBrushes();
@@ -171,8 +175,7 @@ int main(void){
         }
         else{
             bool guiClicked = UpdateEditorState(doc, &settings, &vp, &draggedPage, &dragOffsetY, &currentPressure, &listeningForBind, pallete);
-            BeginDrawing();
-            ClearBackground(DARKGRAY);
+        
             RenderWorkspace(doc, &settings, vp.camera, draggedPage, dragOffsetY,
             vp.mouseWorldPos, guiClicked, vp.isMouseInsideCanvas);
             RenderUI(doc, &settings, GetMousePosition(), &listeningForBind, &appState);
@@ -184,6 +187,7 @@ int main(void){
     }
     SaveSettings(settings);
     FreeDocument(doc);
+    FreeArena(&activeStrokeArena);
     CloseWindow();
 
     return 0;

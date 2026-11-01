@@ -1,4 +1,5 @@
 #include "include/memory.h"
+#include "include/memory_arena.h"
 #include "include/rlgl.h"
 #include <math.h>
 RenderTexture2D LoadRenderTexture2DOnly(int width, int height){
@@ -23,17 +24,37 @@ RenderTexture2D LoadRenderTexture2DOnly(int width, int height){
     }
     return target;
 }
-void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure){
-    if(stroke->pointCount >= stroke->capacity){
-        stroke->capacity = stroke->capacity == 0 ? 128 : stroke->capacity * 2;
-        stroke->points = (StrokePoint *)realloc(stroke->points, stroke->capacity * sizeof(StrokePoint));
 
+void AddPointToStroke(Stroke *stroke, Vector2 point, float pressure){
+    //first alocation
+    if(stroke->pointCount == 0 || stroke->points == NULL){
+        stroke->capacity = 4096;
+        stroke->points = (StrokePoint *)ArenaAlloc(&activeStrokeArena, stroke->capacity * sizeof(StrokePoint));
+
+        if(stroke->points == NULL) return;
     }
+    // extending the capacity
+    if(stroke->pointCount >= stroke->capacity){
+        int oldCapacity = stroke->capacity;
+        stroke->capacity *= 2;
+
+        StrokePoint *newPoints = (StrokePoint *)ArenaAlloc(&activeStrokeArena, stroke->capacity * sizeof(StrokePoint));
+        if(newPoints == NULL){
+            stroke->capacity = oldCapacity;
+            return;
+        }
+        //copying the old points
+        for(int i = 0; i < oldCapacity; i++){
+            newPoints[i] = stroke->points[i];
+        }
+        stroke->points = newPoints;
+    }
+    //adding the new point
     stroke->points[stroke->pointCount].pos = point;
     stroke->points[stroke->pointCount].pressure = pressure;
     stroke->pointCount++;
-}
 
+}
 void AddStrokeToLayer(Layer *layer, Stroke stroke){
     if(layer->strokeCount >= layer->capacity){
         layer->capacity = layer->capacity == 0 ? 32 : layer->capacity * 2;
