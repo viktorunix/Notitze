@@ -78,8 +78,6 @@ void UndoCommand(Document *doc){
         if(doc->useBakedRendering && layer->tiles != NULL){
             int totalTiles = layer->gridCols * layer->gridRows;
             
-            // Scanăm TOATE tile-urile pentru a elimina garantat indexul, 
-            // evitând erorile de calcul AABB care lăsau dangling pointers.
             for (int t = 0; t < totalTiles; t++) {
                 Tile *tile = &layer->tiles[t];
                 if (!tile->isAllocated) continue;
@@ -96,7 +94,7 @@ void UndoCommand(Document *doc){
                 }
                 tile->strokeCount = keepCount;
 
-                // Refacem FBO-ul doar dacă am șters efectiv ceva din el
+               
                 if (needsRebake) {
                     int col = t % layer->gridCols;
                     int row = t / layer->gridCols;
@@ -123,10 +121,8 @@ void UndoCommand(Document *doc){
             }
         }
         
-        // Înlocuim RemoveStrokeFromLayer pentru a preveni orice double-free ascuns
         layer->strokeCount--;
         
-        // Eliberăm memoria abia la final, când suntem siguri că niciun tile nu o mai referențiază
         if(pointsToFree) free(pointsToFree);
     }
     else if(cmd.type == CMD_ERASE_STROKE){
