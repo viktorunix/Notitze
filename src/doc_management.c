@@ -23,9 +23,11 @@ void MoveActivePageDown(Document *doc){
 }
 
 void FinishStroke(Stroke *currentStroke, Document *doc){
-    float rdpTolerance = 1.0f;
-    SimplifyStroke(currentStroke, rdpTolerance);
-
+    if(currentStroke->type == BRUSH_PEN || currentStroke->type == BRUSH_PENCIL || currentStroke->type == BRUSH_HIGHLIGHTER){
+        float rdpTolerance = 0.25f;
+        SimplifyStroke(currentStroke, rdpTolerance);
+    }
+    
     if(currentStroke->pointCount > 0 && currentStroke->points != NULL){
         StrokePoint *permanentPoints = (StrokePoint*)malloc(currentStroke->pointCount * sizeof(StrokePoint));
         memcpy(permanentPoints, currentStroke->points, currentStroke->pointCount * sizeof(StrokePoint));
@@ -95,6 +97,10 @@ void FinishStroke(Stroke *currentStroke, Document *doc){
         }
     } else {
         //free(currentStroke->points);
+        if(currentStroke->points !=NULL){
+            free(currentStroke->points);
+            currentStroke->points = NULL;
+        }
     }
     *currentStroke = (Stroke){0};
 }

@@ -24,7 +24,7 @@ static void FreeHand_OnPress(Document *doc, Vector2 pos, float pressure){
 }
 
 static void FreeHand_OnDrag(Document *doc, Vector2 pos, float pressure){
-    #ifdef __WIN32
+    #ifdef _WIN32
     if(currentStroke.pointCount > 0){
         Vector2 lastPoint = currentStroke.points[currentStroke.pointCount - 1].pos;
         float dist = Vector2Distance(pos, lastPoint);

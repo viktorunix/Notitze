@@ -9,11 +9,17 @@
 
 extern Stroke currentStroke;
 void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool guiHovered){
+    static Vector2 smoothedPos = {0};
+    static float smoothedPressure = 0.0f;
+
     state->mouseScreenPos = GetMousePosition();
     state->mouseWorldPos = GetScreenToWorld2D(state->mouseScreenPos, camera);
     state->mouseDelta = GetMouseDelta();
     state->scrollDelta = GetMouseWheelMove();
-    state->pressure = GetTabletPressure();
+    float rawPressure = GetTabletPressure();
+    smoothedPressure += (rawPressure - smoothedPressure) * 0.15f;
+
+    state->pressure = smoothedPressure;
     state->smoothingFactor = settings->smoothingFactor;
 
     state->isHardwareActive = (
@@ -51,7 +57,8 @@ void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool
 }
 void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedPage, float* dragOffsetY){
     static Vector2 smoothedPos = {0};
-    float smoothingFactor = 1.0f -state->smoothingFactor;
+    float smoothingFactor = fmax(1.0f -state->smoothingFactor, 0.01f);
+
     if(state->pressed[ACTION_DRAW]){
         if(vp->isMouseInsideCanvas){
             doc->activePage = vp->hoveredPage;
