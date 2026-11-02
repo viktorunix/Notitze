@@ -57,6 +57,7 @@ void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool
 }
 void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedPage, float* dragOffsetY){
     static Vector2 smoothedPos = {0};
+    static Vector2 snapStartPos = {0};
     float smoothingFactor = fmax(1.0f -state->smoothingFactor, 0.01f);
 
     if(state->pressed[ACTION_DRAW]){
@@ -69,6 +70,7 @@ void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedP
 
             } else {
                 smoothedPos = vp->localMousePos;
+                snapStartPos = vp->localMousePos;
                 GetActiveBrush()->OnPress(doc, vp->localMousePos, state->pressure);
 
             }
@@ -97,9 +99,19 @@ void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedP
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
         Vector2 realMousePos = {clampedX, clampedY};
+        
+        if(IsKeyDown(KEY_LEFT_SHIFT)){
+            float dx = realMousePos.x - snapStartPos.x;
+            float dy = realMousePos.y - snapStartPos.y;
+
+            if(fabsf(dx) > fabsf(dy)) {
+                realMousePos.y = snapStartPos.y;
+            } else {
+                realMousePos.x = snapStartPos.x;
+            }
+        }
         smoothedPos.x += (realMousePos.x - smoothedPos.x) * smoothingFactor;
         smoothedPos.y += (realMousePos.y - smoothedPos.y) * smoothingFactor;
-
 
         GetActiveBrush()->OnDrag(doc, smoothedPos, state->pressure);
 
