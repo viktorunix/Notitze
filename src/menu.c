@@ -9,6 +9,7 @@
 
 
 
+
 static NotebookIndex libraryIdx = {0};
 
 static bool showNewModal = false;
@@ -77,6 +78,22 @@ bool UpdateDrawMainMenu(Document *doc){
                         break;
                     case CTX_EXPORT:
                         printf("exporting the file %d\n", ctxMenu.targetDocIndex);
+                        const char *exportPath = ShowSaveFileDialog();
+                        
+                        if (exportPath != NULL && strlen(exportPath) > 0) {
+                            
+                            Document *exportDoc = CreateEmptyDocument();
+                            LoadFromNotebook("Library.ntzbook", ctxMenu.targetDocIndex, exportDoc);
+
+                            SaveDocumentBinary(exportPath, exportDoc);
+                            
+
+                            FreeDocument(exportDoc);
+                            
+                            printf("Export .ntz complet!\n");
+                        }
+                        
+                        ctxMenu.isActive = false;
                         break;
                 }
             }
