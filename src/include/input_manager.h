@@ -28,6 +28,7 @@ typedef struct {
 
     float scrollDelta;
     float pressure;
+    float smoothingFactor;
 
     bool isHardwareActive;
 } InputState;

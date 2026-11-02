@@ -14,6 +14,7 @@ void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool
     state->mouseDelta = GetMouseDelta();
     state->scrollDelta = GetMouseWheelMove();
     state->pressure = GetTabletPressure();
+    state->smoothingFactor = settings->smoothingFactor;
 
     state->isHardwareActive = (
         state->mouseDelta.x != 0.0f || state->mouseDelta.y != 0.0f ||
@@ -49,6 +50,8 @@ void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool
 
 }
 void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedPage, float* dragOffsetY){
+    static Vector2 smoothedPos = {0};
+    float smoothingFactor = 1.0f -state->smoothingFactor;
     if(state->pressed[ACTION_DRAW]){
         if(vp->isMouseInsideCanvas){
             doc->activePage = vp->hoveredPage;
@@ -58,6 +61,7 @@ void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedP
                 *dragOffsetY = state->mouseWorldPos.y - (vp->hoveredPage * (doc->pageHeight + PAGE_GAP));
 
             } else {
+                smoothedPos = vp->localMousePos;
                 GetActiveBrush()->OnPress(doc, vp->localMousePos, state->pressure);
 
             }
@@ -85,13 +89,15 @@ void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedP
         float clampedY = vp->localMousePos.y;
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
+        Vector2 realMousePos = {clampedX, clampedY};
+        smoothedPos.x += (realMousePos.x - smoothedPos.x) * smoothingFactor;
+        smoothedPos.y += (realMousePos.y - smoothedPos.y) * smoothingFactor;
 
-        Vector2 clampedPos = {clampedX, clampedY};
 
-        GetActiveBrush()->OnDrag(doc, clampedPos, state->pressure);
+        GetActiveBrush()->OnDrag(doc, smoothedPos, state->pressure);
 
         if(!vp->isMouseInsideCanvas){
-            GetActiveBrush()->OnRelease(doc, clampedPos);
+            GetActiveBrush()->OnRelease(doc, smoothedPos);
         }
     }
     else if (vp->isPanning || state->active[ACTION_PAN]){

@@ -35,6 +35,8 @@ typedef struct {
     int *currentBrushColors;
     int currentBrushColorsIndex;
 
+    float smoothingFactor;
+
 } Settings;
 const char* KeyToString(int key);
 void SettingsBinds(BindState *listeningForBind, Settings *settings);

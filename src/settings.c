@@ -128,6 +128,10 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     DrawText("KEY", boxX + 320, boxY + 30, 20, WHITE);
     int col2X = boxX + 250;
     int currentY = boxY + 80;
+    engineY +=50;
+    DrawText("Stroke Smoothing", col1X, engineY - 10, 20, LIGHTGRAY);
+    GUISlider((Rectangle){col1X, engineY + 20, 200, 20}, &settings->smoothingFactor, 0.05f, 1.0f);
+    DrawText(TextFormat("%d%%", (int)(settings->smoothingFactor * 100)), col1X + 200, engineY - 10, 20, WHITE);
 
     #define DRAW_BIND_ROW(label, keyval, bindID, xPos, yPos) \
         DrawText(label, xPos, yPos + 10, 20, LIGHTGRAY); \
@@ -161,6 +165,8 @@ void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind)
     if(GUIButton((Rectangle){col3X, currentY, 180, 40}, doc->enableLayers ? "Layers: ON" : "Layers: OFF", doc->enableLayers))
         doc->enableLayers = !doc->enableLayers;
     #undef DRAW_BIND_ROW
+
+    
 }
 void SaveSettings(Settings settings){
     FILE *file = fopen("settings.stz", "wb");

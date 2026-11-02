@@ -103,6 +103,7 @@ int main(void){
     settings.currentBrushThickness = 3.0f;
     settings.selectedColorIndex = 0;
     settings.pallete = (Color*)malloc(5 * sizeof(Color));
+    settings.smoothingFactor = 0.25f;
     Color p[] = {BLACK, RED, DARKBLUE, DARKGREEN, PURPLE};
     memcpy(settings.pallete, p, 5 * sizeof(Color));
 
