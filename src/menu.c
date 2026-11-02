@@ -12,6 +12,11 @@
 static NotebookIndex libraryIdx = {0};
 
 static bool showNewModal = false;
+static bool showRenameModal = false;
+static bool ignoreNextClick = false;
+static char renameBuffer[64] = "";
+static bool isTypingRename = false;
+static int renameTargetIndex = -1;
 static PaperFormat selectedFormat = FORMAT_A4;
 static float customW = 1240.0f;
 static float customH = 1754.0f;
@@ -51,12 +56,24 @@ bool UpdateDrawMainMenu(Document *doc){
         
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
             if(ctxMenu.hoveredOption != CTX_NONE) {
+                ignoreNextClick = true;
                 switch (ctxMenu.hoveredOption){
                     case CTX_RENAME:
                         printf("renaming the file %d\n", ctxMenu.targetDocIndex);
+                        showRenameModal = true;
+                        renameTargetIndex = ctxMenu.targetDocIndex;
+                        isTypingName = false;
+
+                        strncpy(renameBuffer, libraryIdx.entries[renameTargetIndex].title, 64);
                         break;
                     case CTX_DELETE:
                         printf("deleting thefile %d\n", ctxMenu.targetDocIndex);
+                        DeleteFromNotebook("Library.ntzbook", ctxMenu.targetDocIndex);
+                        for(int j = ctxMenu.targetDocIndex; j < libraryIdx.count - 1; j++){
+                            libraryIdx.entries[j] = libraryIdx.entries[j+1];
+                        }
+                        libraryIdx.count--;
+                        
                         break;
                     case CTX_EXPORT:
                         printf("exporting the file %d\n", ctxMenu.targetDocIndex);
@@ -84,9 +101,9 @@ bool UpdateDrawMainMenu(Document *doc){
    for(int i = 0 ; i<libraryIdx.count; i++){
        
        Rectangle itemBounds = {x, y, itemW, itemH};
-       bool isHovered = !showNewModal && !ctxMenu.isActive && CheckCollisionPointRec(GetMousePosition(), itemBounds);
+       bool isHovered = !showNewModal && !showRenameModal && !ctxMenu.isActive && CheckCollisionPointRec(GetMousePosition(), itemBounds);
 
-       if (!ctxMenu.isActive && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && CheckCollisionPointRec(GetMousePosition(), itemBounds)) {
+       if (!showNewModal && !showRenameModal && !ctxMenu.isActive && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && CheckCollisionPointRec(GetMousePosition(), itemBounds)) {
            ctxMenu.isActive = true;
            ctxMenu.position = GetMousePosition();
            ctxMenu.targetDocIndex = i; 
@@ -113,8 +130,10 @@ bool UpdateDrawMainMenu(Document *doc){
        DrawText(displayName, x + (itemW - MeasureText(displayName, 15))/2, y + 140, 15, WHITE);
 
        if(isHovered && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
-           LoadFromNotebook("Library.ntzbook", i, doc);
-           return true;
+           if(!ignoreNextClick){
+                LoadFromNotebook("Library.ntzbook", i, doc);
+                return true;
+           }
        }
 
        // grid layout
@@ -196,6 +215,29 @@ bool UpdateDrawMainMenu(Document *doc){
             return true;
         }
    }
+    if(showRenameModal){
+        DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
+        int mWidth = 400;
+        int mHeight = 200;
+        int mX = (GetScreenWidth() - mWidth) / 2;
+        int mY = (GetScreenHeight() - mHeight) /2;
+
+        DrawRectangleRounded((Rectangle){mX, mY, mWidth, mHeight}, 0.1f, 10, (Color){40,40,45,255});
+        DrawRectangleRoundedLinesEx((Rectangle){mX, mY, mWidth, mHeight}, 0.1f, 19, 2.0f, (Color){80,80,85,255});
+
+        DrawText("Rename Note", mX + 20, mY + 20, 20, WHITE);
+
+        GUITextBox((Rectangle){mX + 20, mY + 70, 360, 40}, renameBuffer, 64 , &isTypingRename);
+
+        if (GUIButton((Rectangle){mX + 20, mY + 140, 170, 40}, "Cancel", false)){
+            showRenameModal = false;
+        }
+        if (GUIButton((Rectangle){mX + 210, mY + 140, 170,40}, "Save", false)){
+            strncpy(libraryIdx.entries[renameTargetIndex].title, renameBuffer, 64);
+            RenameInNotebook("Library.ntzbook", renameTargetIndex, renameBuffer);
+            showRenameModal = false;
+        }
+    }
    
     if (ctxMenu.isActive) {
         Rectangle menuBounds = { ctxMenu.position.x, ctxMenu.position.y, menuWidth, menuHeight };
@@ -218,6 +260,9 @@ bool UpdateDrawMainMenu(Document *doc){
                 DrawLine(itemBounds.x + 10, itemBounds.y + itemHeight, itemBounds.x + menuWidth - 10, itemBounds.y + itemHeight, LIGHTGRAY);
             }
         }
+    }
+    if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
+        ignoreNextClick = false;
     }
    return false;
 }

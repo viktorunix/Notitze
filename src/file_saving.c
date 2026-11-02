@@ -610,3 +610,118 @@ const char *ShowExportPNGDialog(){
 #endif
     return NULL;
 }
+
+void DeleteFromNotebook(const char *notebookPath, int targetIndex){
+    NotebookIndex idx = ScanNotebook(notebookPath);
+    if (targetIndex < 0 || targetIndex >= idx.count) return;
+
+    const char *rewritePath = "temp_rewrite.ntzbook";
+    FILE *oldNb = fopen(notebookPath, "rb");
+    if(!oldNb) return;
+
+    FILE *newNb = fopen(rewritePath, "wb");
+    if(!newNb){
+        fclose(oldNb);
+        return;
+    }
+
+    char magic[4] = "NTZB";
+    fwrite(magic, 1, 4, newNb);
+    fseek(oldNb, 4, SEEK_SET);
+
+    int currentIndex = 0;
+    while(!feof(oldNb) && currentIndex < idx.count) {
+        char tag[5] = {0};
+        uint32_t size = 0;
+        if (fread(tag, 1, 4, oldNb) != 4 ) break;
+        if (fread(&size, sizeof(uint32_t), 1, oldNb) != 1) break;
+
+        long chunkStart = ftell(oldNb);
+
+        //if found note we skip it
+        if(currentIndex == targetIndex){
+            if(strcmp(tag, "FILE") == 0){
+                currentIndex ++;
+            }
+        } else {
+            fwrite(tag, 1, 4, newNb);
+            fwrite(&size, sizeof(uint32_t), 1, newNb);
+
+            char buffer[4096];
+            uint32_t remaining = size;
+            while (remaining > 0) {
+                uint32_t toRead = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
+                fread(buffer, 1, toRead, oldNb);
+                fwrite(buffer, 1, toRead, newNb);
+                remaining -= toRead;
+            }
+            if(strcmp(tag, "FILE") == 0){
+                currentIndex++;
+            }
+        }
+        fseek(oldNb, chunkStart + size, SEEK_SET);
+
+    }
+
+    fclose(oldNb);
+    fclose(newNb);
+
+    remove(notebookPath);
+    rename(rewritePath, notebookPath);
+}
+void RenameInNotebook(const char *notebookPath, int targetIndex, const char *newTitle) {
+    NotebookIndex idx = ScanNotebook(notebookPath);
+    if (targetIndex < 0 || targetIndex >= idx.count) return;
+
+    const char *rewritePath = "temp_rewrite.ntzbook";
+    FILE *oldNb = fopen(notebookPath, "rb");
+    if (!oldNb) return;
+    
+    FILE *newNb = fopen(rewritePath, "wb");
+    if (!newNb) {
+        fclose(oldNb);
+        return;
+    }
+
+    char magic[4] = "NTZB";
+    fwrite(magic, 1, 4, newNb);
+    fseek(oldNb, 4, SEEK_SET);
+
+    int currentIndex = 0;
+    while (!feof(oldNb) && currentIndex < idx.count) {
+        char tag[5] = {0};
+        uint32_t size = 0;
+        if (fread(tag, 1, 4, oldNb) != 4) break;
+        if (fread(&size, sizeof(uint32_t), 1, oldNb) != 1) break;
+        
+        long chunkStart = ftell(oldNb);
+
+        if (currentIndex == targetIndex && strcmp(tag, "TITL") == 0) {
+            uint32_t titleLen = strlen(newTitle);
+            WriteChunk(newNb, "TITL", (void*)newTitle, titleLen);
+        } 
+        else {
+            fwrite(tag, 1, 4, newNb);
+            fwrite(&size, sizeof(uint32_t), 1, newNb);
+            
+            char buffer[4096];
+            uint32_t remaining = size;
+            while (remaining > 0) {
+                uint32_t toRead = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
+                fread(buffer, 1, toRead, oldNb);
+                fwrite(buffer, 1, toRead, newNb);
+                remaining -= toRead;
+            }
+            if (strcmp(tag, "FILE") == 0) {
+                currentIndex++;
+            }
+        }
+        fseek(oldNb, chunkStart + size, SEEK_SET);
+    }
+    
+    fclose(oldNb);
+    fclose(newNb);
+    
+    remove(notebookPath);
+    rename(rewritePath, notebookPath);
+}

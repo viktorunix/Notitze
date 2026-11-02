@@ -53,4 +53,7 @@ void LoadFromNotebook(const char *notebookPath, int index, Document *doc);
 void CacheTexture(const char* filename, Texture2D texture);
 
 const char* ShowExportPNGDialog();
+
+void DeleteFromNotebook(const char *notebookPath, int targetIndex);
+void RenameInNotebook(const char *notebookPath, int targetIndex, const char *newTitle);
 #endif
