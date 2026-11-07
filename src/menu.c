@@ -215,6 +215,8 @@ bool UpdateDrawMainMenu(Document *doc){
             Document *tempDoc = CreateEmptyDocument();
             *doc = *tempDoc;
 
+            free(tempDoc);
+
             doc->brushTex = tempBrush;
             doc->pencilTex = tempPencil;
 

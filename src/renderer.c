@@ -457,7 +457,7 @@ void RenderWorkspace(Document *doc, Settings* settings, Camera2D camera,
     if (startPage < 0) startPage = 0;
     if (endPage >= doc->pageCount) endPage = doc->pageCount - 1;
 
-    for(int p = startPage; p < endPage; p++){
+    for(int p = startPage; p <= endPage; p++){
         if(p == draggedPage) continue;
         float pageYOffset = p * pageStride;
         GUIPage(doc, &currentStroke, p, pageYOffset, camera);
