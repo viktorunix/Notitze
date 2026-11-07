@@ -1,9 +1,12 @@
 CC = gcc
 CFLAGS = -O2  -I src/include -xc -std=c11
 LDFLAGS = -L src/lib
-LIBS = -l:raylib.dll -lopengl32 -lgdi32 -lwinmm -lcomdlg32
+LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm -lcomdlg32 
 
-SRC = $(wildcard src/*.c) $(wildcard src/tools/*.c)
+# All .c files in src/ and src/tools/, excluding Wayland-only files
+ALL_SRC = $(wildcard src/*.c) $(wildcard src/tools/*.c)
+WAYLAND_SRC = src/tablet_wayland.c src/tablet-unstable-v2.c
+SRC = $(filter-out $(WAYLAND_SRC), $(ALL_SRC))
 OBJ = $(patsubst src/%.c, build/%.o, $(patsubst src/tools/%.c, build/tools/%.o, $(SRC)))
 TARGET = notitze.exe
 BIN_DIR = build\bin

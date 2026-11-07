@@ -385,7 +385,7 @@ void RebakeAllLayers(Document *doc) {
         }
     }
 }
-void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera){
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera, Vector2 mouseWorldPos){
     DrawRectangle(8, pageYOffset + 8, doc->pageWidth, doc->pageHeight, BLACK);
     DrawRectangle(0, pageYOffset, doc->pageWidth, doc->pageHeight, RAYWHITE);
     DrawPageBackground(doc, doc->pattern, pageYOffset);
@@ -393,7 +393,7 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     BeginPageClipping(doc->pageWidth, doc->pageHeight, pageYOffset, camera);
     
     Page *page = &doc->pages[p];
-
+ 
     for(int l = 0; l < page->layerCount; l++) {
         Layer *layer = &page->layers[l];
         if(!layer->isVisible) continue;
@@ -437,6 +437,40 @@ void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camer
     Color borderColor = (p == doc->activePage) ? SKYBLUE : LIGHTGRAY;
     int borderThickness = (p == doc->activePage) ? 4 : 1;
     DrawRectangleLinesEx((Rectangle){0, pageYOffset, doc->pageWidth, doc->pageHeight}, borderThickness, borderColor);
+
+    float btnX = doc->pageWidth + 20;
+    float btnY = pageYOffset + 20;
+
+    Rectangle btnBefore = {btnX, btnY, 110, 35};
+    Rectangle btnDelete = {btnX, btnY + 45, 110, 35};
+    Rectangle btnAfter = {btnX, btnY + 90, 110, 35};
+
+    bool hoverBefore = CheckCollisionPointRec(mouseWorldPos, btnBefore);
+    bool hoverDelete = CheckCollisionPointRec(mouseWorldPos, btnDelete);
+    bool hoverAfter = CheckCollisionPointRec(mouseWorldPos, btnAfter);
+
+    DrawRectangleRounded(btnBefore, 0.4f, 10, hoverBefore ? (Color){70, 70, 70, 255} : (Color){45, 45, 45, 255});
+    DrawRectangleRoundedLinesEx(btnBefore, 0.4f, 10, 1.5f, (Color){80,80,80, 255});
+    DrawText("+ Before", btnBefore.x + 15, btnBefore.y + 10, 15, hoverBefore? WHITE: LIGHTGRAY);
+
+    bool canDelete = (doc->pageCount > 1); // Cenușiu dacă e ultima pagină rămasă
+    DrawRectangleRounded(btnDelete, 0.4f, 10, (hoverDelete && canDelete) ? (Color){150, 50, 50, 255} : (Color){45, 45, 45, 255});
+    DrawRectangleRoundedLinesEx(btnDelete, 0.4f, 10, 1.5f, (Color){80, 80, 80, 255});
+    DrawText("Delete", btnDelete.x + 30, btnDelete.y + 10, 15, (hoverDelete && canDelete) ? WHITE : (canDelete ? LIGHTGRAY : DARKGRAY));
+
+    DrawRectangleRounded(btnAfter, 0.4f, 10, hoverAfter ? (Color){70, 70, 70, 255} : (Color){45, 45, 45, 255});
+    DrawRectangleRoundedLinesEx(btnAfter, 0.4f, 10, 1.5f, (Color){80, 80, 80, 255});
+    DrawText("+ After", btnAfter.x + 25, btnAfter.y + 10, 15, hoverAfter ? WHITE : LIGHTGRAY);
+
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        if (hoverBefore) {
+            InsertPageAtIndex(doc, p);
+        } else if (hoverDelete && canDelete) {
+            DeletePageAtIndex(doc, p);
+        } else if (hoverAfter) {
+            InsertPageAtIndex(doc, p + 1);
+        }
+    }
 }
 
 void RenderWorkspace(Document *doc, Settings* settings, Camera2D camera,
@@ -460,7 +494,7 @@ void RenderWorkspace(Document *doc, Settings* settings, Camera2D camera,
     for(int p = startPage; p <= endPage; p++){
         if(p == draggedPage) continue;
         float pageYOffset = p * pageStride;
-        GUIPage(doc, &currentStroke, p, pageYOffset, camera);
+        GUIPage(doc, &currentStroke, p, pageYOffset, camera, mouseWorldPos);
     }
 
     if(draggedPage != -1){

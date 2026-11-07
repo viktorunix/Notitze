@@ -276,8 +276,6 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
         return true;
     }
     curX += 80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 70, btnH}, "New", false)) AddPageToDocument(doc);
-    curX += 70 + gap;
 
     if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Exp NTZ", false)){
         const char *path = ShowSaveFileDialog();
@@ -304,8 +302,6 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 80, btnH}, "Undo", false)) UndoCommand(doc);
     curX +=80 + gap;
-    if(GUIButton((Rectangle){curX, curY, 90, btnH}, "Delete", false)) DeleteActivePage(doc);
-    curX += 80 + gap;
     if(GUIButton((Rectangle){curX, curY, 100, btnH}, "Settings", settings->showSettings)) settings->showSettings = !settings->showSettings;
 
     return false;

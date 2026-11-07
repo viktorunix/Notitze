@@ -14,7 +14,7 @@ void BeginPageClipping(float pageWidth, float pageHeight, float pageYOffset, Cam
 void DrawPageBackground(Document *doc, BgPattern pattern, float pageYOffset);
 void GUILayerPanel(Document *doc, Stroke currentStroke);
 void RebakeAllLayers(Document *doc);
-void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera);
+void GUIPage(Document *doc, Stroke *currentStroke, int p, int pageYOffset, Camera2D camera, Vector2 mouseWorldPos);
 
 void RenderWorkspace(Document* doc, Settings* settings, Camera2D camera,
                      int draggedPage, float dragOffsetY, Vector2 mouseWorldPos,

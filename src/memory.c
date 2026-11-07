@@ -256,3 +256,42 @@ void AddStrokeToTile(Tile *tile, int strokeIndex){
     }
     tile->strokeIndices[tile->strokeCount++] = strokeIndex;
 }
+
+void InsertPageAtIndex(Document *doc, int index){
+    if(index < 0 || index > doc->pageCount) return;
+
+    //extending the capacity when needed
+    if (doc->pageCount >= doc->pageCapacity){
+        doc->pageCapacity = doc->pageCapacity == 0 ? 4 : doc->pageCapacity * 2;
+        doc->pages = (Page *)realloc(doc->pages, doc->pageCapacity * sizeof(Page));
+    }
+
+    // shifting pages to the right
+    for (int i = doc->pageCount; i > index; i--) {
+        doc->pages[i] = doc->pages[i - 1];
+    }
+
+    // initializing new page
+    doc->pages[index] = (Page){0};
+    AddLayerToPage(&doc->pages[index], doc->pageWidth, doc->pageHeight, doc->renderScale);
+
+    doc->activePage = index;
+    doc->pageCount++;
+}
+
+void DeletePageAtIndex(Document *doc, int index){
+    //preventing to delete the page if its the only one
+    if(doc->pageCount <= 1 || index < 0 || index >= doc->pageCount) return;
+
+    FreePage(&doc->pages[index]);
+
+    //shifting pages to the left
+    for(int i = index; i < doc->pageCount - 1; i++) {
+        doc->pages[i] = doc->pages[i + 1];
+    }
+    doc->pageCount--;
+
+    if(doc->activePage >= doc->pageCount) {
+        doc->activePage = doc->pageCount - 1;
+    }
+}
