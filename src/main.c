@@ -30,13 +30,24 @@ float currentBrushThickness = 3.0f;
 
 bool UpdateEditorState(Document *doc, Settings *settings, Viewport *vp,
 int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeningForBind, Color *pallete){
-    Vector2 mousePos = GetMousePosition();
+    
+    //setting virtual mouse for ui
+    float uiScale = fminf((float)GetScreenWidth() / 1400.0f, (float)GetScreenHeight()/ 900.0f);
+    float uiOffsetX = (GetScreenWidth() - (1400.0f * uiScale)) / 2.0f;
+    float uiOffsetY = (GetScreenHeight() - (900.0f * uiScale)) / 2.0f;
 
+    //making raylib return the mouse coordinates based of the 1400x900 resolution
+    SetMouseOffset(-(int)uiOffsetX, -(int)uiOffsetY);
+    SetMouseScale(1.0f / uiScale, 1.0f / uiScale);
+    Vector2 virtualMousePos = GetMousePosition();
+
+    //verifiying the UI collisions that uses the virtual space
     int barWidth = 1000;
     int barHeight = 140;
     int barY = 20;
-    int barX = (GetScreenWidth() - barWidth) / 2;
-
+    int barX = (1400 - barWidth)/ 2;
+    
+ 
     Rectangle uiBounds = {(float)barX, (float)barY, (float)barWidth, (float)barHeight};
     bool guiClicked = settings->showSettings;
     bool layerHovered = false;
@@ -45,9 +56,9 @@ int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeni
     if(doc->enableLayers && !settings->showSettings){
         int pH = 60 + (doc->pages[doc->activePage].layerCount * 40) + (doc->pages[doc->activePage].layerCount > 1 ? 50 : 0);
         Rectangle layerBounds = {(float)(GetScreenWidth() - 240), (float)(barY + barHeight + 20), 220, (float)pH};
-        layerHovered = CheckCollisionPointRec(mousePos, layerBounds);
+        layerHovered = CheckCollisionPointRec(virtualMousePos, layerBounds);
     }
-    bool uiHovered = CheckCollisionPointRec(mousePos, uiBounds) || layerHovered;
+    bool uiHovered = CheckCollisionPointRec(virtualMousePos, uiBounds) || layerHovered;
     guiClicked = settings->showSettings || uiHovered;
 
     //updating shortcuts and input
@@ -55,7 +66,7 @@ int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeni
     InputHandler(doc, settings, listeningForBind);
 
     //preventing accidental drawing uner the tool docker
-    if(mousePos.y < (barY + barHeight) && !settings->showSettings){
+    if(virtualMousePos.y < (barY + barHeight) && !settings->showSettings){
         guiClicked = true;
     }
     //updating the active brush
@@ -66,8 +77,13 @@ int *draggedPage, float *dragOffsetY, float *currentPressure, BindState *listeni
     currentBrushThickness = settings->currentBrushThicknesses[settings->currentBrushThicknessIndex];
     currentBrushColor = settings->pallete[settings->currentBrushColors[settings->currentBrushColorsIndex]];
 
+
+    //returning to real mouse 
+    SetMouseOffset(0,0);
+    SetMouseScale(1.0f, 1.0f);
+    Vector2 rawMousePos = GetMousePosition();
     //sending the state of viewport and the drawing process
-    UpdateViewportMath(vp, doc, mousePos, guiClicked);
+    UpdateViewportMath(vp, doc, rawMousePos, guiClicked);
     InputState state = {0};
     PollInputState(&state, settings, vp->camera, guiClicked);
     ProcessInputs(doc, vp, &state, draggedPage, dragOffsetY);
@@ -168,25 +184,56 @@ int main(void){
             if(frameSinceLastActivity > activeFPS)
                 SetTargetFPS(idleFPS);
         }
+
+        float uiScale = fminf((float)GetScreenWidth() / 1400.0f, (float)GetScreenHeight() / 900.0f);
+        float uiOffsetX = (GetScreenWidth() - (1400.0f * uiScale)) / 2.0f;
+        float uiOffsetY = (GetScreenHeight() - (900.0f * uiScale)) / 2.0f;
+
+        Camera2D uiCamera = {0};
+        uiCamera.target = (Vector2){0,0};
+        uiCamera.offset = (Vector2){uiOffsetX, uiOffsetY};
+        uiCamera.zoom = uiScale;
+        uiCamera.rotation = 0.0f;
+
         bool guiClicked = false;
         if(appState == STATE_EDITOR){
             guiClicked = UpdateEditorState(doc, &settings, &vp, &draggedPage,&dragOffsetY, &currentPressure, &listeningForBind, pallete);
             ManageTileMemory(doc, vp.camera);
+
         }
         BeginDrawing();
-        ClearBackground(DARKGRAY);
+        ClearBackground((Color){25, 25, 30, 255});
         if(appState == STATE_MENU){
+            SetMouseOffset(-(int)uiOffsetX, -(int)uiOffsetY);
+            SetMouseScale(1.0f / uiScale, 1.0f / uiScale);
+
+            BeginMode2D(uiCamera);
             if(UpdateDrawMainMenu(doc)){
                 appState = STATE_EDITOR;
                 InitViewport(&vp, doc->pageWidth);
             }
+            EndMode2D();
+
+            SetMouseOffset(0, 0);
+            SetMouseScale(1.0f, 1.0f);
         }
         else{
             
         
             RenderWorkspace(doc, &settings, vp.camera, draggedPage, dragOffsetY,
             vp.mouseWorldPos, guiClicked, vp.isMouseInsideCanvas);
+
+            SetMouseOffset(-(int)uiOffsetX, -(int)uiOffsetY);
+            SetMouseScale(1.0f / uiScale, 1.0f / uiScale);
+
+            BeginMode2D(uiCamera);
+
             RenderUI(doc, &settings, GetMousePosition(), &listeningForBind, &appState);
+            EndMode2D();
+
+            SetMouseOffset(0, 0);
+            SetMouseScale(1.0f, 1.0f);
+            
             if(appState == STATE_MENU){
                 InitMainMenu();
             }

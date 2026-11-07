@@ -40,7 +40,7 @@ bool UpdateDrawMainMenu(Document *doc){
     const int menuHeight = CTX_OPTION_COUNT * itemHeight;
 
     //top bar
-    DrawRectangle(0,0, GetScreenWidth(), 80, (Color){40,40,45,255});
+    DrawRectangle(0,0, 1400, 80, (Color){40,40,45,255});
     DrawText("Notitze - Library", 40, 25, 30, WHITE);
 
     //path breadcrumbs
@@ -102,7 +102,7 @@ bool UpdateDrawMainMenu(Document *doc){
     }
 
    //new document
-   if(!showNewModal && !ctxMenu.isActive && GUIButton((Rectangle){GetScreenWidth() - 180, 20, 140, 40}, "+ New Note", false)){
+   if(!showNewModal && !ctxMenu.isActive && GUIButton((Rectangle){1400 - 180, 20, 140, 40}, "+ New Note", false)){
        showNewModal = true;
        snprintf(newDocName, sizeof(newDocName), "Note %d", libraryIdx.count + 1);
        isTypingName = false;
@@ -125,8 +125,8 @@ bool UpdateDrawMainMenu(Document *doc){
            ctxMenu.position = GetMousePosition();
            ctxMenu.targetDocIndex = i; 
            
-           if (ctxMenu.position.x + menuWidth > GetScreenWidth()) ctxMenu.position.x -= menuWidth;
-           if (ctxMenu.position.y + menuHeight > GetScreenHeight()) ctxMenu.position.y -= menuHeight;
+           if (ctxMenu.position.x + menuWidth > 1400) ctxMenu.position.x -= menuWidth;
+           if (ctxMenu.position.y + menuHeight > 900) ctxMenu.position.y -= menuHeight;
        }
 
        DrawRectangleRounded(itemBounds, 0.1f, 8, isHovered ? (Color){60,60,65,255}:(Color){45,45,50,255});
@@ -155,19 +155,19 @@ bool UpdateDrawMainMenu(Document *doc){
 
        // grid layout
        x += itemW + 30;
-       if(x > GetScreenWidth() - itemW - 40){
+       if(x > 1400 - itemW - 40){
            x = startX;
            y += itemH +30;
        }
    }
    
    if(showNewModal){
-       DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
+       DrawRectangle(0,0, 1400, 900, (Color){0,0,0,150});
 
        int mWidth = 420;
        int mHeight = 350;
-       int mX = (GetScreenWidth() - mWidth)/2;
-       int mY = (GetScreenHeight() - mHeight) /2;
+       int mX = (1400 - mWidth)/2;
+       int mY = (900 - mHeight) /2;
 
        //background
        DrawRectangleRounded((Rectangle){mX, mY, mWidth, mHeight}, 0.1f, 10,(Color){40,40,45,255});
@@ -233,11 +233,11 @@ bool UpdateDrawMainMenu(Document *doc){
         }
    }
     if(showRenameModal){
-        DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
+        DrawRectangle(0,0, 1400, 900, (Color){0,0,0,150});
         int mWidth = 400;
         int mHeight = 200;
-        int mX = (GetScreenWidth() - mWidth) / 2;
-        int mY = (GetScreenHeight() - mHeight) /2;
+        int mX = (1400 - mWidth) / 2;
+        int mY = (900 - mHeight) /2;
 
         DrawRectangleRounded((Rectangle){mX, mY, mWidth, mHeight}, 0.1f, 10, (Color){40,40,45,255});
         DrawRectangleRoundedLinesEx((Rectangle){mX, mY, mWidth, mHeight}, 0.1f, 19, 2.0f, (Color){80,80,85,255});

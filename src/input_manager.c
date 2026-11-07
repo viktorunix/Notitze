@@ -58,10 +58,12 @@ void PollInputState(InputState *state, Settings *settings, Camera2D camera, bool
 void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedPage, float* dragOffsetY){
     static Vector2 smoothedPos = {0};
     static Vector2 snapStartPos = {0};
+    static bool isSnapped = false;
     float smoothingFactor = fmax(1.0f -state->smoothingFactor, 0.01f);
 
     if(state->pressed[ACTION_DRAW]){
         if(vp->isMouseInsideCanvas){
+            isSnapped = false;
             doc->activePage = vp->hoveredPage;
 
             if(vp->localMousePos.y <=40){
@@ -99,8 +101,10 @@ void ProcessInputs(Document *doc, Viewport* vp, InputState* state, int* draggedP
         if (clampedY < 40.0f) clampedY = 40.0f;
         if (clampedY > doc->pageHeight) clampedY = doc->pageHeight;
         Vector2 realMousePos = {clampedX, clampedY};
-        
         if(IsKeyDown(KEY_LEFT_SHIFT)){
+            isSnapped = true;
+        }
+        if(isSnapped){
             float dx = realMousePos.x - snapStartPos.x;
             float dy = realMousePos.y - snapStartPos.y;
 

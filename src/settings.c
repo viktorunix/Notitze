@@ -69,12 +69,12 @@ void InputHandler(Document *doc, Settings *settings, BindState *listeningForBind
     }
 }
 void SettingsPage(Document *doc,Settings *settings, BindState *listeningForBind){
-    DrawRectangle(0,0, GetScreenWidth(), GetScreenHeight(), (Color){0,0,0,150});
+    DrawRectangle(0,0, 1400, 900, (Color){0,0,0,150});
 
     int boxW = 800;
     int boxH = 500;
-    int boxX = (GetScreenWidth() - boxW)/2;
-    int boxY =  (GetScreenHeight() - boxH)/2;
+    int boxX = (1400 - boxW)/2;
+    int boxY =  (900 - boxH)/2;
 
 
     DrawRectangleRounded((Rectangle){boxX, boxY, boxW, boxH}, 0.05f, 10, (Color){40, 40, 40, 255});
@@ -214,7 +214,7 @@ bool GUIHeaderDock(Document *doc, Settings *settings, Vector2 mousePos){
     int barWidth = 1100;
     int barHeight = 140;
     int barY = 20;
-    int barX = (GetScreenWidth() - barWidth) / 2;
+    int barX = (1400 - barWidth) / 2;
     Rectangle uiBounds = { (float)barX, (float)barY, (float)barWidth, (float)barHeight};
 
     DrawRectangleRounded((Rectangle){barX + 5, barY + 5, barWidth, barHeight}, 0.2f, 16, (Color){0,0,0,100});
