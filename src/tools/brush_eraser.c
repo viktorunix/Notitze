@@ -52,6 +52,15 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                 for (int idx = tile->strokeCount - 1; idx >= 0; idx--) {
                     int i = tile->strokeIndices[idx];
                     Stroke *s = &activeLayer->strokes[i];
+
+                    //fast AABB rejection
+                    if(s->hasBounds){
+                        Rectangle eraserRec = {pos.x - eraserRadius, pos.y - eraserRadius, eraserRadius * 2.0f, eraserRadius * 2.0f};
+                        Rectangle strokeRec = {s->bounds.minX, s->bounds.minY, s->bounds.maxX - s->bounds.minX, s->bounds.maxY - s->bounds.minY};
+                        if (!CheckCollisionRecs(eraserRec, strokeRec)) {
+                            continue; 
+                        }
+                    }
                     bool hit = false;
                     float hitThreshold = (s->thickness / 2.0f) + eraserRadius;
 
@@ -78,7 +87,8 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                         if(CheckCollisionCircleRec(pos, eraserRadius, textRec)) hit = true;
                     }
                     else if (s->pointCount >= 2) {
-                        for (int j = 0; j < s->pointCount - 1; j++) {
+                        int step = (s->pointCount > 30) ? 3 : 1;
+                        for (int j = 0; j < s->pointCount - 1; j += step) {
                             if (DistancePointSegment(pos, s->points[j].pos, s->points[j+1].pos) <= hitThreshold) {
                                 hit = true;
                                 break;
@@ -108,6 +118,9 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
 
                         PushEraseCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, s, i);
                         RemoveStrokeFromLayer(activeLayer, i);
+
+
+                        break;
                     }
                 }
             }
@@ -115,6 +128,14 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
     } else {
         for(int i = activeLayer->strokeCount - 1; i >=0; i--){
             Stroke *s = &activeLayer->strokes[i];
+            if (s->hasBounds) {
+                Rectangle eraserRec = {pos.x - eraserRadius, pos.y - eraserRadius, eraserRadius * 2.0f, eraserRadius * 2.0f};
+                Rectangle strokeRec = {s->bounds.minX, s->bounds.minY, s->bounds.maxX - s->bounds.minX, s->bounds.maxY - s->bounds.minY};
+                if (!CheckCollisionRecs(eraserRec, strokeRec)) {
+                    continue; 
+                }
+            }
+            
             bool hit = false;
             float hitThreshold = (s->thickness / 2.0f) + eraserRadius;
 
@@ -141,7 +162,8 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                 if(CheckCollisionCircleRec(pos, eraserRadius, textRec)) hit = true;
             }
             else if (s->pointCount >= 2) {
-                for (int j = 0; j < s->pointCount - 1; j++) {
+                int step = (s->pointCount > 30) ? 3 : 1; 
+                for (int j = 0; j < s->pointCount - 1; j += step) {
                     if (DistancePointSegment(pos, s->points[j].pos, s->points[j+1].pos) <= hitThreshold) {
                         hit = true;
                         break;
@@ -153,6 +175,8 @@ static void Eraser_OnDrag(Document *doc, Vector2 pos, float pressure) {
                 PushEraseCommand(doc->activePage, doc->pages[doc->activePage].activeLayer, s, i);
                 RemoveStrokeFromLayer(activeLayer, i);
             }
+
+            break;
         }
     }
 
